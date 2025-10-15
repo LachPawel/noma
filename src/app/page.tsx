@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -12,9 +13,9 @@ import FeatureCard from '@/components/FeatureCard';
 import CyberInput from '@/components/CyberInput';
 import CyberBackground from '@/components/CyberBackground';
 
-export default function AnonNeobankUI() {
-  const { publicKey, signTransaction, connected } = useWallet();
-  const [step, setStep] = useState('landing');
+export default function Home() {
+  const { connected, publicKey, signTransaction } = useWallet();
+  const [step, setStep] = useState<'landing' | 'verify-otp' | 'dashboard'>('landing');
   const [isLogin, setIsLogin] = useState(false);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -63,6 +64,7 @@ export default function AnonNeobankUI() {
     if (connected && step === 'dashboard') {
       loadBalances();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected]);
 
   const handleCreateAccount = async () => {
@@ -85,8 +87,8 @@ export default function AnonNeobankUI() {
       const data = await response.json();
       setUserData({ ...data, isNewUser: !isLogin });
       setStep('verify-otp');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -125,8 +127,8 @@ export default function AnonNeobankUI() {
       }));
       
       await loadBalances();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -250,8 +252,8 @@ export default function AnonNeobankUI() {
       } else {
         throw new Error(result.error || 'Transfer failed');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -469,7 +471,7 @@ export default function AnonNeobankUI() {
               <div className="mb-6">
                 <p className="text-gray-400 text-sm mb-2">Grid Account</p>
                 <h2 className="text-3xl font-bold">${balance.toFixed(2)}</h2>
-                <p className="text-gray-500 text-sm mt-2">{userState?.address.slice(0, 8)}...</p>
+                <p className="text-gray-500 text-sm mt-2">{userState?.address?.slice(0, 8)}...</p>
               </div>
               <div className="bg-black rounded-lg p-4 border border-gray-800">
                 <div className="flex items-center justify-between mb-2">

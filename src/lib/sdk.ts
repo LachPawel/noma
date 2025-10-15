@@ -1,8 +1,11 @@
 // lib/sdk.ts
 import { GridClient } from '@sqds/grid';
 import { UsdcPlusStablecoin, LstStablecoin, ReflectTokenisedBond } from '@reflectmoney/stable.ts';
-import { Connection, PublicKey, Keypair, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
+import { Connection, PublicKey, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
 import BN from 'bn.js';
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 interface UserState {
   address: string;
@@ -162,7 +165,7 @@ class AnonNeobankSDK {
       instructions: ix,
       payerKey: userPubkey,
       recentBlockhash: blockhash
-    }).compileToV0Message([lookupTable]);
+    }).compileToV0Message(lookupTable ? [lookupTable] : []);
 
     const transaction = new VersionedTransaction(message);
     return Buffer.from(transaction.serialize()).toString('base64');
@@ -185,7 +188,7 @@ class AnonNeobankSDK {
       instructions: ix,
       payerKey: userPubkey,
       recentBlockhash: blockhash
-    }).compileToV0Message([lookupTable]);
+    }).compileToV0Message(lookupTable ? [lookupTable] : []);
 
     const transaction = new VersionedTransaction(message);
     return Buffer.from(transaction.serialize()).toString('base64');
@@ -245,9 +248,10 @@ class AnonNeobankSDK {
 
       // Extract the transaction signature
       if (signResult && typeof signResult === 'object') {
-        const sig = (signResult as any).signature || 
-                    (signResult as any).transactionSignature || 
-                    (signResult as any).tx_signature;
+        const resultObj = signResult as any;
+        const sig = resultObj.signature || 
+                    resultObj.transactionSignature || 
+                    resultObj.tx_signature;
         
         if (sig) {
           return sig;
@@ -265,10 +269,10 @@ class AnonNeobankSDK {
 
   // UMBRA INTEGRATION - COMING SOON
   async createPrivateTransfer(
-    userPubkey: PublicKey,
-    recipientUmbraAddress: string,
-    amount: number,
-    mint: string
+    _userPubkey: PublicKey,
+    _recipientUmbraAddress: string,
+    _amount: number,
+    _mint: string
   ): Promise<string> {
     throw new Error(
       'Private transfers coming soon! Umbra integration in development. ' +
