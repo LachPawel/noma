@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 
 function FloatingPaths({ position }: { position: number }) {
-    const paths = Array.from({ length: 24 }, (_, i) => ({
+    const paths = Array.from({ length: 36 }, (_, i) => ({
         id: i,
         d: `M-${380 - i * 5 * position} -${189 + i * 6}C-${
             380 - i * 5 * position
@@ -12,7 +12,7 @@ function FloatingPaths({ position }: { position: number }) {
         } ${343 - i * 6}C${616 - i * 5 * position} ${470 - i * 6} ${
             684 - i * 5 * position
         } ${875 - i * 6} ${684 - i * 5 * position} ${875 - i * 6}`,
-        width: 0.3 + i * 0.02,
+        width: 0.5 + i * 0.03,
     }));
 
     return (
@@ -29,15 +29,15 @@ function FloatingPaths({ position }: { position: number }) {
                         d={path.d}
                         stroke="currentColor"
                         strokeWidth={path.width}
-                        strokeOpacity={0.03 + path.id * 0.005}
-                        initial={{ pathLength: 0.4, opacity: 0.2 }}
+                        strokeOpacity={0.1 + path.id * 0.03}
+                        initial={{ pathLength: 0.3, opacity: 0.6 }}
                         animate={{
                             pathLength: 1,
-                            opacity: [0.15, 0.25, 0.15],
+                            opacity: [0.3, 0.6, 0.3],
                             pathOffset: [0, 1, 0],
                         }}
                         transition={{
-                            duration: 25 + Math.random() * 15,
+                            duration: 20 + Math.random() * 10,
                             repeat: Number.POSITIVE_INFINITY,
                             ease: "linear",
                         }}
@@ -50,7 +50,7 @@ function FloatingPaths({ position }: { position: number }) {
 
 export default function CyberBackground() {
     return (
-        <div className="fixed inset-0 pointer-events-none opacity-40" style={{ zIndex: 0 }}>
+        <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
             <FloatingPaths position={1} />
             <FloatingPaths position={-1} />
         </div>

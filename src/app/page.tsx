@@ -304,7 +304,12 @@ export default function AnonNeobankUI() {
             <FeatureCard
               icon={Shield}
               title="Private Transfers"
-              description="Anonymous transfers with cryptographic privacy. Coming Soon"
+              description={
+                <>
+                  Anonymous transfers with cryptographic privacy.{' '}
+                  <span className="text-[#70ec9f] font-bold">Coming Soon</span>
+                </>
+              }
               delay={0.2}
             />
             <FeatureCard
@@ -435,8 +440,11 @@ export default function AnonNeobankUI() {
 
   if (step === 'dashboard') {
     return (
-      <div className="min-h-screen bg-black text-white">
-        <nav className="border-b border-gray-800 bg-black">
+      <div className="min-h-screen cyber-bg text-white relative overflow-hidden">
+        <CyberBackground />
+        <div className="animated-grid fixed inset-0 pointer-events-none opacity-20" style={{ zIndex: 0 }} />
+        
+        <nav className="border-b border-gray-800 bg-black/50 backdrop-blur-sm relative" style={{ zIndex: 10 }}>
           <div className="container mx-auto px-4 py-4 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Shield className="w-8 h-8 text-[#70ec9f]" />
@@ -455,9 +463,9 @@ export default function AnonNeobankUI() {
           </div>
         </nav>
 
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8 relative" style={{ zIndex: 10 }}>
           <div className="max-w-4xl mx-auto mb-8">
-            <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-8">
+            <div className="glass-strong rounded-lg p-8">
               <div className="mb-6">
                 <p className="text-gray-400 text-sm mb-2">Grid Account</p>
                 <h2 className="text-3xl font-bold">${balance.toFixed(2)}</h2>
@@ -483,7 +491,7 @@ export default function AnonNeobankUI() {
           )}
 
           <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
-            <div className="bg-[#1a1a1a] rounded-lg p-6 border border-gray-800">
+            <div className="glass glow-border rounded-lg p-6">
               <h3 className="text-xl font-bold mb-4 flex items-center space-x-2">
                 <TrendingUp className="w-6 h-6 text-[#70ec9f]" />
                 <span>Convert to Yield</span>
@@ -521,7 +529,7 @@ export default function AnonNeobankUI() {
               </div>
             </div>
 
-            <div className="bg-[#1a1a1a] rounded-lg p-6 border border-gray-800">
+            <div className="glass glow-border rounded-lg p-6">
               <h3 className="text-xl font-bold mb-4 flex items-center space-x-2">
                 <Send className="w-6 h-6 text-[#70ec9f]" />
                 <span>Send Money</span>
@@ -564,7 +572,7 @@ export default function AnonNeobankUI() {
             </div>
           </div>
 
-          <div className="max-w-4xl mx-auto mt-8 bg-[#1a1a1a] border border-gray-800 rounded-lg p-4">
+          <div className="max-w-4xl mx-auto mt-8 glass glow-border rounded-lg p-4">
             <div className="flex items-start space-x-3">
               <EyeOff className="w-5 h-5 text-[#70ec9f] mt-0.5" />
               <div>

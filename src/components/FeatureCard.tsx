@@ -7,7 +7,7 @@ import { LucideIcon } from 'lucide-react';
 interface FeatureCardProps {
   icon: LucideIcon;
   title: string;
-  description: string;
+  description: React.ReactNode;
   delay?: number;
 }
 
@@ -32,9 +32,9 @@ export default function FeatureCard({
       <h3 className="text-xl font-bold mb-3 text-white group-hover:text-[#70ec9f] transition-colors">
         {title}
       </h3>
-      <p className="text-gray-400 leading-relaxed">
+      <div className="text-gray-400 leading-relaxed">
         {description}
-      </p>
+      </div>
     </motion.div>
   );
 }
