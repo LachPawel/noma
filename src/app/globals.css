@@ -1,23 +1,146 @@
 @import "tailwindcss";
 
 :root {
-  --background: #000000;
-  --foreground: #ffffff;
-  --lime: #a3ff12;
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 10%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 10%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 153 79% 64%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 63%;
+  --accent: 153 79% 64%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 15%;
+  --input: 0 0% 15%;
+  --ring: 153 79% 64%;
+  --radius: 0.5rem;
+  
+  /* Custom colors */
+  --lime: #70ec9f;
+  --cyan: #00ffff;
+  --purple: #a855f7;
+  --pink: #ec4899;
   --gray-dark: #1a1a1a;
   --gray-medium: #2a2a2a;
   --gray-light: #9ca3af;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Minimalistic Background */
+.cyber-bg {
+  background: #000000;
+  position: relative;
+}
+
+/* Minimalistic Glass Effect */
+.glass {
+  background: rgba(26, 26, 26, 0.7);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(112, 236, 159, 0.1);
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.3);
+}
+
+.glass-strong {
+  background: rgba(26, 26, 26, 0.85);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(112, 236, 159, 0.15);
+  box-shadow: 0 8px 24px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Minimalistic Border Effect */
+.glow-border {
+  position: relative;
+  border: 1px solid rgba(112, 236, 159, 0.2);
+  transition: all 0.3s ease;
+}
+
+.glow-border:hover {
+  border-color: rgba(112, 236, 159, 0.4);
+  box-shadow: 0 0 15px rgba(112, 236, 159, 0.15);
+}
+
+/* Minimalistic Button */
+
+/* Minimalistic Button */
+.cyber-button {
+  position: relative;
+  background: linear-gradient(135deg, #70ec9f 0%, #5dd889 100%);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.cyber-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(112, 236, 159, 0.2);
+}
+
+.cyber-button:active {
+  transform: translateY(0);
+}
+
+/* Subtle Grid Background */
+@keyframes gridMove {
+  0% { background-position: 0 0; }
+  100% { background-position: 50px 50px; }
+}
+
+.animated-grid {
+  background-image: 
+    linear-gradient(rgba(112, 236, 159, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(112, 236, 159, 0.02) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: gridMove 30s linear infinite;
+}
+
+/* Floating Animation */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+.float-animation {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Subtle Pulse */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 10px rgba(112, 236, 159, 0.1); }
+  50% { box-shadow: 0 0 15px rgba(112, 236, 159, 0.2); }
+}
+
+.pulse-glow {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #70ec9f, #5dd889);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #5dd889, #70ec9f);
 }
