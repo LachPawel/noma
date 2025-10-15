@@ -1,20 +1,33 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Wallet, EyeOff, TrendingUp, Send, Shield, Banknote, Loader2 } from 'lucide-react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { VersionedTransaction } from '@solana/web3.js';
+import { EyeOff, TrendingUp, Send, Shield, Banknote, Loader2 } from 'lucide-react';
 
 export default function AnonNeobankUI() {
+  const { publicKey, signTransaction, connected } = useWallet();
   const [step, setStep] = useState('landing');
+  const [isLogin, setIsLogin] = useState(false);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [userData, setUserData] = useState<any>(null);
   const [userState, setUserState] = useState<any>(null);
   const [balance, setBalance] = useState(0);
+  const [usdcBalance, setUsdcBalance] = useState(0);
   const [yieldEarned, setYieldEarned] = useState(0);
+  const [convertAmount, setConvertAmount] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
   const [recipient, setRecipient] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (connected && step === 'dashboard') {
+      loadBalances();
+    }
+  }, [connected]);
 
   const handleCreateAccount = async () => {
     if (!email) return;
@@ -25,13 +38,16 @@ export default function AnonNeobankUI() {
       const response = await fetch('/api/account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create', email })
+        body: JSON.stringify({ 
+          action: isLogin ? 'login' : 'create', 
+          email 
+        })
       });
 
-      if (!response.ok) throw new Error('Failed to create account');
+      if (!response.ok) throw new Error(isLogin ? 'Login failed' : 'Failed to create account');
       
       const data = await response.json();
-      setUserData(data);
+      setUserData({ ...data, isNewUser: !isLogin });
       setStep('verify-otp');
     } catch (err: any) {
       setError(err.message);
@@ -54,7 +70,8 @@ export default function AnonNeobankUI() {
           otpCode: otp,
           user: userData.user,
           sessionSecrets: userData.sessionSecrets,
-          email: userData.email
+          email: userData.email,
+          isNewUser: userData.isNewUser // Pass the flag to determine which flow to use
         })
       });
 
@@ -63,7 +80,7 @@ export default function AnonNeobankUI() {
       const result = await response.json();
       setUserState(result);
       setStep('dashboard');
-      loadBalances(result.address);
+      await loadBalances();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -71,15 +88,78 @@ export default function AnonNeobankUI() {
     }
   };
 
-  const loadBalances = async (address: string) => {
+  const loadBalances = async () => {
+    if (!userState?.address && !publicKey) return;
+
     try {
-      const response = await fetch(`/api/account?address=${address}`);
+      const response = await fetch(`/api/account?address=${userState?.address || publicKey?.toString()}`);
       const data = await response.json();
       setBalance(data.sol || 0);
-      // Mock yield for demo
+      
+      const usdcToken = data.tokens?.find((t: any) => 
+        t.symbol === 'USDC' || t.mint === '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'
+      );
+      setUsdcBalance(usdcToken?.amount || 0);
+      
       setYieldEarned(12.45);
     } catch (err) {
       console.error('Failed to load balances:', err);
+    }
+  };
+
+  const handleConvertToYield = async () => {
+    if (!publicKey || !signTransaction || !convertAmount) {
+      setError('Connect wallet to convert to yield-bearing stablecoin');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // Request transaction from API
+      const response = await fetch('/api/account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'convert',
+          publicKey: publicKey.toString(),
+          amount: parseFloat(convertAmount)
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to create conversion transaction');
+      
+      const { transaction: serializedTx } = await response.json();
+      
+      // Deserialize and sign the transaction
+      const transaction = VersionedTransaction.deserialize(
+        Buffer.from(serializedTx, 'base64')
+      );
+      const signed = await signTransaction(transaction);
+      
+      // Send transaction back to API for submission
+      const submitResponse = await fetch('/api/account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'submit',
+          signedTransaction: Buffer.from(signed.serialize()).toString('base64')
+        })
+      });
+
+      const result = await submitResponse.json();
+      if (result.signature) {
+        alert('Successfully converted to USDC+! Signature: ' + result.signature);
+        setConvertAmount('');
+        await loadBalances();
+      } else {
+        throw new Error(result.error || 'Conversion failed');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -107,7 +187,7 @@ export default function AnonNeobankUI() {
         alert('Transfer successful! Signature: ' + result.signature);
         setTransferAmount('');
         setRecipient('');
-        loadBalances(userState.address);
+        await loadBalances();
       } else {
         throw new Error(result.error || 'Transfer failed');
       }
@@ -133,8 +213,7 @@ export default function AnonNeobankUI() {
               Financial freedom. Built for privacy.
             </p>
             <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-              Earn yield on stablecoins while maintaining complete financial privacy. 
-              No surveillance. No tracking. Just you and your money.
+              Earn yield on stablecoins while maintaining complete financial privacy.
             </p>
           </div>
 
@@ -159,13 +238,35 @@ export default function AnonNeobankUI() {
               <Banknote className="w-12 h-12 text-purple-400 mb-4" />
               <h3 className="text-xl font-bold mb-3">No Bank Required</h3>
               <p className="text-gray-400">
-                Open an account in minutes with just email. No KYC required.
+                Open an account in minutes with just email.
               </p>
             </div>
           </div>
 
           <div className="max-w-md mx-auto bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/20">
-            <h2 className="text-2xl font-bold mb-6 text-center">Get Started</h2>
+            <div className="flex justify-center mb-6">
+              <div className="bg-gray-900 rounded-lg p-1 flex">
+                <button
+                  onClick={() => setIsLogin(false)}
+                  className={`px-6 py-2 rounded-md transition ${
+                    !isLogin ? 'bg-purple-600 text-white' : 'text-gray-400'
+                  }`}
+                >
+                  Sign Up
+                </button>
+                <button
+                  onClick={() => setIsLogin(true)}
+                  className={`px-6 py-2 rounded-md transition ${
+                    isLogin ? 'bg-purple-600 text-white' : 'text-gray-400'
+                  }`}
+                >
+                  Login
+                </button>
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold mb-6 text-center">
+              {isLogin ? 'Welcome Back' : 'Get Started'}
+            </h2>
             {error && (
               <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-sm">
                 {error}
@@ -188,10 +289,11 @@ export default function AnonNeobankUI() {
                 disabled={loading || !email}
                 className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition disabled:opacity-50 flex items-center justify-center"
               >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Create Anonymous Account'}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 
+                  isLogin ? 'Login to Account' : 'Create Account'}
               </button>
               <p className="text-xs text-gray-500 text-center">
-                By creating an account, you agree to our privacy-first principles
+                {isLogin ? 'We\'ll send an OTP to verify your email' : 'By creating an account, you agree to our privacy-first principles'}
               </p>
             </div>
           </div>
@@ -206,10 +308,7 @@ export default function AnonNeobankUI() {
         <div className="max-w-md w-full mx-4 bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/20">
           <h2 className="text-2xl font-bold mb-6 text-center">Verify Your Email</h2>
           <p className="text-gray-400 mb-6 text-center">
-            We've sent a 6-digit code to <span className="text-purple-400">{email}</span>
-          </p>
-          <p className="text-sm text-yellow-400 mb-6 text-center">
-            Check spam folder. May take 1-2 minutes.
+            Code sent to <span className="text-purple-400">{email}</span>
           </p>
           {error && (
             <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-sm">
@@ -218,7 +317,7 @@ export default function AnonNeobankUI() {
           )}
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Enter OTP Code</label>
+              <label className="block text-sm font-medium mb-2">Enter OTP</label>
               <input
                 type="text"
                 value={otp}
@@ -234,7 +333,7 @@ export default function AnonNeobankUI() {
               disabled={loading || otp.length !== 6}
               className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition disabled:opacity-50 flex items-center justify-center"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify & Create Account'}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify'}
             </button>
           </div>
         </div>
@@ -252,8 +351,7 @@ export default function AnonNeobankUI() {
               <span className="text-xl font-bold">Anonbank</span>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-400">{userState?.address.slice(0, 8)}...</span>
-              <Wallet className="w-6 h-6 text-purple-400" />
+              <WalletMultiButton />
             </div>
           </div>
         </nav>
@@ -261,37 +359,71 @@ export default function AnonNeobankUI() {
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto mb-8">
             <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-8 shadow-2xl">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <p className="text-purple-100 text-sm mb-2">Total Balance</p>
-                  <h2 className="text-5xl font-bold">${balance.toFixed(2)}</h2>
-                  <p className="text-purple-100 text-sm mt-2">USDC+</p>
-                </div>
+              <div className="mb-6">
+                <p className="text-purple-100 text-sm mb-2">Grid Account</p>
+                <h2 className="text-3xl font-bold">${balance.toFixed(2)}</h2>
+                <p className="text-purple-100 text-sm mt-2">{userState?.address.slice(0, 8)}...</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-purple-100 text-sm">Yield Earned (24h)</span>
-                  <span className="text-white font-bold text-lg">+${yieldEarned.toFixed(2)}</span>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-purple-100 text-sm">USDC Balance</span>
+                  <span className="text-white font-bold">${usdcBalance.toFixed(2)}</span>
                 </div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-purple-100 text-sm">APY</span>
-                  <span className="text-green-300 font-semibold">~8.5%</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-purple-100 text-sm">Yield Earned</span>
+                  <span className="text-green-300 font-semibold">+${yieldEarned.toFixed(2)}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="max-w-4xl mx-auto">
+          {error && (
+            <div className="max-w-4xl mx-auto mb-6 p-4 bg-red-500/20 border border-red-500 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/20">
+              <h3 className="text-xl font-bold mb-4 flex items-center space-x-2">
+                <TrendingUp className="w-6 h-6 text-purple-400" />
+                <span>Convert to Yield</span>
+              </h3>
+              <p className="text-sm text-gray-400 mb-4">
+                Convert USDC to USDC+ (yield-bearing) using your wallet
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Amount (USDC)</label>
+                  <input
+                    type="number"
+                    value={convertAmount}
+                    onChange={(e) => setConvertAmount(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500"
+                    placeholder="0.00"
+                    step="0.01"
+                    disabled={loading}
+                  />
+                </div>
+                <button
+                  onClick={handleConvertToYield}
+                  disabled={loading || !convertAmount || !connected}
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition disabled:opacity-50 flex items-center justify-center"
+                >
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 
+                   !connected ? 'Connect Wallet' : 'Convert to USDC+'}
+                </button>
+              </div>
+            </div>
+
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/20">
               <h3 className="text-xl font-bold mb-4 flex items-center space-x-2">
                 <Send className="w-6 h-6 text-purple-400" />
                 <span>Send Money</span>
               </h3>
-              {error && (
-                <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-sm">
-                  {error}
-                </div>
-              )}
+              <p className="text-sm text-gray-400 mb-4">
+                Send via Grid (uses your Grid session)
+              </p>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Amount (USDC)</label>
@@ -306,34 +438,22 @@ export default function AnonNeobankUI() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Recipient Address</label>
+                  <label className="block text-sm font-medium mb-2">Recipient</label>
                   <input
                     type="text"
                     value={recipient}
                     onChange={(e) => setRecipient(e.target.value)}
                     className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500"
-                    placeholder="Wallet address..."
+                    placeholder="Address..."
                     disabled={loading}
                   />
-                </div>
-                <div className="flex items-center justify-between p-4 bg-gray-900/50 rounded-lg border border-gray-700">
-                  <div className="flex items-center space-x-3">
-                    <EyeOff className="w-5 h-5 text-gray-500" />
-                    <div>
-                      <p className="font-medium text-sm text-gray-400">Private Transfer</p>
-                      <p className="text-xs text-purple-400">Coming Soon - Umbra Integration</p>
-                    </div>
-                  </div>
-                  <div className="bg-gray-700 px-3 py-1 rounded-full text-xs">
-                    Q1 2025
-                  </div>
                 </div>
                 <button
                   onClick={handleTransfer}
                   disabled={loading || !transferAmount || !recipient}
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition disabled:opacity-50 flex items-center justify-center"
                 >
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send Transfer'}
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send'}
                 </button>
               </div>
             </div>
@@ -341,11 +461,11 @@ export default function AnonNeobankUI() {
 
           <div className="max-w-4xl mx-auto mt-8 bg-purple-900/30 backdrop-blur-sm border border-purple-500/30 rounded-lg p-4">
             <div className="flex items-start space-x-3">
-              <Shield className="w-5 h-5 text-purple-400 mt-0.5" />
+              <EyeOff className="w-5 h-5 text-purple-400 mt-0.5" />
               <div>
-                <p className="text-sm font-medium">Privacy Features Coming Soon</p>
+                <p className="text-sm font-medium">Private Transfers Coming Soon</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Umbra integration will enable cryptographic stealth addresses for completely anonymous transfers.
+                  Umbra integration will enable anonymous transfers via stealth addresses.
                 </p>
               </div>
             </div>

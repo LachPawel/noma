@@ -73,6 +73,39 @@ class AnonNeobankSDK {
     };
   }
 
+  async loginEmailAccount(email: string): Promise<any> {
+    // Use initAuth for existing users
+    const response = await this.gridClient.initAuth({ email });
+    const user = response.data;
+    const sessionSecrets = await this.gridClient.generateSessionSecrets();
+    return { user, sessionSecrets, email, isNewUser: false };
+  }
+
+  async completeLogin(
+    userState: any,
+    otpCode: string
+  ): Promise<UserState> {
+    // Use completeAuth for existing users (NOT completeAuthAndCreateAccount)
+    const authResult = await this.gridClient.completeAuth({
+      user: userState.user,
+      otpCode,
+      sessionSecrets: userState.sessionSecrets,
+    });
+
+    if (!authResult.success) {
+      throw new Error('Login failed');
+    }
+
+    // For existing users, we need to get the account address
+    // The completeAuth response should contain authentication data
+    return {
+      address: authResult.data?.address || userState.user?.address || '',
+      authentication: authResult.data?.authentication,
+      sessionSecrets: userState.sessionSecrets,
+      email: userState.email
+    };
+  }
+
   // ============================================================================
   // YIELD-BEARING STABLECOINS
   // ============================================================================
@@ -135,33 +168,39 @@ class AnonNeobankSDK {
   // TRANSFERS
   // ============================================================================
 
-  async createRegularTransfer(
-    userState: UserState,
-    destination: string,
-    amount: number,
-    mint: string
-  ): Promise<string> {
-    const spendingLimitPayload = {
-      amount: amount,
-      mint: mint,
-      period: 'one_time' as const,
-      destinations: [destination],
-    };
+  // In lib/sdk.ts, replace createRegularTransfer:
+async createRegularTransfer(
+  userState: UserState,
+  destination: string,
+  amount: number,
+  mint: string
+): Promise<string> {
+  const spendingLimitPayload = {
+    amount: amount,
+    mint: mint,
+    period: 'one_time' as const,
+    destinations: [destination],
+  };
 
-    const result = await this.gridClient.createSpendingLimit(
-      userState.address,
-      spendingLimitPayload
-    );
+  const result = await this.gridClient.createSpendingLimit(
+    userState.address,
+    spendingLimitPayload
+  );
 
-    const signature = await this.gridClient.signAndSend({
-      sessionSecrets: userState.sessionSecrets,
-      session: userState.authentication,
-      transactionPayload: result.data,
-      address: userState.address,
-    });
-
-    return signature;
+  // Check if result.data has the transaction
+  if (!result.data?.transaction) {
+    throw new Error('No transaction returned from Grid');
   }
+
+  const signature = await this.gridClient.signAndSend({
+    sessionSecrets: userState.sessionSecrets,
+    session: userState.authentication,
+    transactionPayload: result.data.transaction, // Use .transaction not .data
+    address: userState.address,
+  });
+
+  return signature;
+}
 
   // UMBRA INTEGRATION - COMING SOON
   async createPrivateTransfer(
