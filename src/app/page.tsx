@@ -449,6 +449,12 @@ export default function AnonNeobankUI() {
                 <TrendingUp className="w-6 h-6 text-purple-400" />
                 <span>Convert to Yield</span>
               </h3>
+              <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <p className="text-xs text-yellow-300 mb-1">⚠️ Mainnet Only Feature</p>
+                <p className="text-xs text-gray-300">
+                  USDC+ conversion requires mainnet-beta. Currently on devnet for testing.
+                </p>
+              </div>
               <p className="text-sm text-gray-400 mb-4">
                 Convert USDC to USDC+ (yield-bearing) using your wallet
               </p>

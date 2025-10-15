@@ -111,10 +111,37 @@ class AnonNeobankSDK {
   // ============================================================================
 
   async loadStablecoinData(): Promise<void> {
-    await Promise.all([
-      this.usdcPlus.load(this.connection),
-      this.lstStable.load(this.connection)
-    ]);
+    // Reflect Money stablecoins are only available on mainnet-beta
+    // Check if we're on the right network
+    const rpcUrl = this.connection.rpcEndpoint;
+    const isMainnet = rpcUrl.includes('mainnet');
+    
+    if (!isMainnet) {
+      console.warn('⚠️  Reflect Money stablecoins (USDC+, LST) are only available on mainnet-beta');
+      console.warn('Current RPC:', rpcUrl);
+      throw new Error(
+        'USDC+ stablecoin conversion is only available on Solana mainnet-beta. ' +
+        'Please switch to mainnet or use regular transfers on devnet.'
+      );
+    }
+    
+    // Only load USDC+ for now, as LST stablecoin may not be available on all networks
+    try {
+      await this.usdcPlus.load();
+      console.log('USDC+ stablecoin data loaded successfully');
+    } catch (error) {
+      console.error('Failed to load USDC+ data:', error);
+      throw new Error('Failed to load USDC+ stablecoin data on mainnet');
+    }
+    
+    // Optionally try to load LST stable, but don't fail if it's not available
+    try {
+      await this.lstStable.load();
+      console.log('LST stablecoin data loaded successfully');
+    } catch (error) {
+      console.warn('LST stablecoin not available:', error);
+      // Don't throw - LST is optional
+    }
   }
 
   async mintUsdcPlus(
@@ -175,62 +202,60 @@ class AnonNeobankSDK {
     mint: string
   ): Promise<string> {
     try {
-      // Use useSpendingLimit to create and execute the transfer
-      // First, we need to create a spending limit, then use it
+      // Grid SDK uses a spending limit approach for transfers
+      // We need to create a one-time spending limit and use it
       
-      // For now, let's use a simpler approach with prepareArbitraryTransaction
-      // Create a simple transfer instruction
-      const { Connection, PublicKey, SystemProgram, Transaction } = await import('@solana/web3.js');
-      const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_URL!);
-      
-      const fromPubkey = new PublicKey(userState.address);
-      const toPubkey = new PublicKey(destination);
-      
-      // Create a basic transfer transaction
-      const transaction = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey,
-          toPubkey,
-          lamports: amount,
-        })
-      );
-      
-      // Get recent blockhash
-      const { blockhash } = await connection.getLatestBlockhash();
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = fromPubkey;
-      
-      // Serialize the transaction
-      const serializedTx = transaction.serialize({
-        requireAllSignatures: false,
-        verifySignatures: false,
-      }).toString('base64');
-      
-      // Prepare the transaction through Grid
-      const preparedTx = await this.gridClient.prepareArbitraryTransaction(
+      console.log('Creating transfer with params:', {
+        from: userState.address,
+        to: destination,
+        amount,
+        mint
+      });
+
+      // Step 1: Create a one-time spending limit
+      const spendingLimitPayload = {
+        amount: amount,
+        mint: mint,
+        period: 'one_time' as const,
+        destinations: [destination],
+        spending_limit_signers: [userState.address] // Use the account address as signer
+      };
+
+      const createResult = await this.gridClient.createSpendingLimit(
         userState.address,
-        { transaction: serializedTx }
+        spendingLimitPayload
       );
-      
-      if (!preparedTx.success || !preparedTx.data) {
-        throw new Error(`Failed to prepare transaction: ${preparedTx.error || 'Unknown error'}`);
+
+      if (!createResult.success || !createResult.data) {
+        console.error('Failed to create spending limit:', createResult.error);
+        throw new Error(`Failed to create spending limit: ${createResult.error || 'Unknown error'}`);
       }
-      
-      // Sign and send the transaction
-      const result = await this.gridClient.signAndSend({
+
+      console.log('Spending limit created, now signing and sending...');
+
+      // Step 2: Sign and send the spending limit transaction
+      const signResult = await this.gridClient.signAndSend({
         sessionSecrets: userState.sessionSecrets,
         session: userState.authentication,
-        transactionPayload: preparedTx.data,
+        transactionPayload: createResult.data,
         address: userState.address,
       });
-      
-      if (!result || typeof result !== 'object') {
-        throw new Error('Invalid response from signAndSend');
+
+      console.log('Sign and send result:', signResult);
+
+      // Extract the transaction signature
+      if (signResult && typeof signResult === 'object') {
+        const sig = (signResult as any).signature || 
+                    (signResult as any).transactionSignature || 
+                    (signResult as any).tx_signature;
+        
+        if (sig) {
+          return sig;
+        }
       }
-      
-      // Extract signature from the result
-      const signature = (result as any).signature || (result as any).transactionSignature || JSON.stringify(result);
-      return signature;
+
+      // If we got here, return the whole result as string
+      return JSON.stringify(signResult);
       
     } catch (error) {
       console.error('Transfer error:', error);
