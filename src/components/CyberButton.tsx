@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
+import { useSound } from '@/hooks/useSound';
 
 interface CyberButtonProps {
   children: React.ReactNode;
@@ -12,6 +13,7 @@ interface CyberButtonProps {
   variant?: 'primary' | 'secondary' | 'outline';
   className?: string;
   type?: 'button' | 'submit' | 'reset';
+  playSound?: boolean;
 }
 
 export default function CyberButton({ 
@@ -21,18 +23,36 @@ export default function CyberButton({
   loading = false,
   variant = 'primary',
   className = '',
-  type = 'button'
+  type = 'button',
+  playSound = true
 }: CyberButtonProps) {
+  const sound = useSound();
+
   const getVariantClasses = () => {
     switch (variant) {
       case 'primary':
         return 'cyber-button text-black font-semibold';
       case 'secondary':
-        return 'bg-gray-800 text-white border border-gray-700 hover:border-[#a3ff12] font-semibold';
+        return 'bg-gray-800 text-white border border-gray-700 hover:border-[#70ec9f] font-semibold';
       case 'outline':
-        return 'bg-transparent text-[#a3ff12] border-2 border-[#a3ff12] hover:bg-[#a3ff12] hover:text-black font-semibold';
+        return 'bg-transparent text-[#70ec9f] border-2 border-[#70ec9f] hover:bg-[#70ec9f] hover:text-black font-semibold';
       default:
         return 'cyber-button text-black font-semibold';
+    }
+  };
+
+  const handleClick = () => {
+    if (playSound && !disabled && !loading) {
+      sound.play('click');
+    }
+    if (onClick) {
+      onClick();
+    }
+  };
+
+  const handleMouseEnter = () => {
+    if (playSound && !disabled && !loading) {
+      sound.play('hover', 0.1);
     }
   };
 
@@ -40,7 +60,8 @@ export default function CyberButton({
     <motion.button
       whileHover={{ scale: disabled ? 1 : 1.02 }}
       whileTap={{ scale: disabled ? 1 : 0.98 }}
-      onClick={onClick}
+      onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
       disabled={disabled || loading}
       type={type}
       className={`

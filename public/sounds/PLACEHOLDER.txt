@@ -1,0 +1,8 @@
+# This is a placeholder file
+# Please download actual sound files from the sources listed in README.md
+# 
+# Recommended quick download:
+# Click sound: https://freesound.org/people/plasterbrain/sounds/242857/
+# 
+# Or use this AI-generated sound data URL (paste in browser):
+# data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=
