@@ -23,6 +23,36 @@ export default function AnonNeobankUI() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Load session from localStorage on mount
+  useEffect(() => {
+    const savedSession = localStorage.getItem('anonbank_session');
+    if (savedSession) {
+      try {
+        const session = JSON.parse(savedSession);
+        
+        // Check if session has expired (7 days = 604800000 ms)
+        const sessionAge = Date.now() - (session.timestamp || 0);
+        const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+        
+        if (sessionAge > maxAge) {
+          // Session expired, clear it
+          localStorage.removeItem('anonbank_session');
+          return;
+        }
+        
+        // Session is valid, restore it
+        if (session.userState && session.email) {
+          setUserState(session.userState);
+          setEmail(session.email);
+          setStep('dashboard');
+        }
+      } catch (err) {
+        console.error('Failed to load session:', err);
+        localStorage.removeItem('anonbank_session');
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (connected && step === 'dashboard') {
       loadBalances();
@@ -80,12 +110,35 @@ export default function AnonNeobankUI() {
       const result = await response.json();
       setUserState(result);
       setStep('dashboard');
+      
+      // Save session to localStorage
+      localStorage.setItem('anonbank_session', JSON.stringify({
+        userState: result,
+        email: userData.email,
+        timestamp: Date.now()
+      }));
+      
       await loadBalances();
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogout = () => {
+    // Clear session from localStorage
+    localStorage.removeItem('anonbank_session');
+    // Reset all state
+    setUserState(null);
+    setUserData(null);
+    setEmail('');
+    setOtp('');
+    setBalance(0);
+    setUsdcBalance(0);
+    setYieldEarned(0);
+    setStep('landing');
+    setError('');
   };
 
   const loadBalances = async () => {
@@ -351,7 +404,14 @@ export default function AnonNeobankUI() {
               <span className="text-xl font-bold">Anonbank</span>
             </div>
             <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-400">{email}</span>
               <WalletMultiButton />
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition text-sm"
+              >
+                Logout
+              </button>
             </div>
           </div>
         </nav>
