@@ -253,42 +253,41 @@ export default function AnonNeobankUI() {
 
   if (step === 'landing') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black text-white">
+      <div className="min-h-screen bg-black text-white">
         <div className="container mx-auto px-4 py-20">
           <div className="text-center mb-16">
             <div className="flex items-center justify-center mb-8">
-              <Shield className="w-16 h-16 text-purple-400" />
+              <Shield className="w-16 h-16 text-[#a3ff12]" />
             </div>
-            <h1 className="text-6xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Anonbank
+            <h1 className="text-7xl font-bold mb-6 text-white leading-tight">
+              Autonomous money<br />designed for the<br />stablecoin era
             </h1>
-            <p className="text-2xl text-gray-300 mb-4">
-              Financial freedom. Built for privacy.
-            </p>
-            <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-              Earn yield on stablecoins while maintaining complete financial privacy.
+            <p className="text-xl text-gray-400 mb-6 max-w-4xl mx-auto uppercase tracking-wider text-sm">
+              Experience USD that automates DeFi strategy, enhances<br />
+              capital efficiency and delivers on decentralization - all<br />
+              seamlessly integrated with insurance.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-16">
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/20">
-              <TrendingUp className="w-12 h-12 text-purple-400 mb-4" />
+            <div className="bg-[#1a1a1a] rounded-lg p-8 border border-gray-800 hover:border-[#a3ff12] transition">
+              <TrendingUp className="w-12 h-12 text-[#a3ff12] mb-4" />
               <h3 className="text-xl font-bold mb-3">Earn Yield</h3>
               <p className="text-gray-400">
                 Your stablecoins automatically earn yield through DeFi strategies.
               </p>
             </div>
 
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/20">
-              <Shield className="w-12 h-12 text-purple-400 mb-4" />
+            <div className="bg-[#1a1a1a] rounded-lg p-8 border border-gray-800 hover:border-[#a3ff12] transition">
+              <Shield className="w-12 h-12 text-[#a3ff12] mb-4" />
               <h3 className="text-xl font-bold mb-3">Private Transfers</h3>
               <p className="text-gray-400">
-                Anonymous transfers with cryptographic privacy. <span className="text-purple-400">Coming Soon</span>
+                Anonymous transfers with cryptographic privacy. <span className="text-[#a3ff12]">Coming Soon</span>
               </p>
             </div>
 
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/20">
-              <Banknote className="w-12 h-12 text-purple-400 mb-4" />
+            <div className="bg-[#1a1a1a] rounded-lg p-8 border border-gray-800 hover:border-[#a3ff12] transition">
+              <Banknote className="w-12 h-12 text-[#a3ff12] mb-4" />
               <h3 className="text-xl font-bold mb-3">No Bank Required</h3>
               <p className="text-gray-400">
                 Open an account in minutes with just email.
@@ -296,13 +295,13 @@ export default function AnonNeobankUI() {
             </div>
           </div>
 
-          <div className="max-w-md mx-auto bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/20">
+          <div className="max-w-md mx-auto bg-[#1a1a1a] rounded-lg p-8 border border-gray-800">
             <div className="flex justify-center mb-6">
-              <div className="bg-gray-900 rounded-lg p-1 flex">
+              <div className="bg-black rounded-lg p-1 flex border border-gray-800">
                 <button
                   onClick={() => setIsLogin(false)}
                   className={`px-6 py-2 rounded-md transition ${
-                    !isLogin ? 'bg-purple-600 text-white' : 'text-gray-400'
+                    !isLogin ? 'bg-[#a3ff12] text-black font-semibold' : 'text-gray-400'
                   }`}
                 >
                   Sign Up
@@ -310,7 +309,7 @@ export default function AnonNeobankUI() {
                 <button
                   onClick={() => setIsLogin(true)}
                   className={`px-6 py-2 rounded-md transition ${
-                    isLogin ? 'bg-purple-600 text-white' : 'text-gray-400'
+                    isLogin ? 'bg-[#a3ff12] text-black font-semibold' : 'text-gray-400'
                   }`}
                 >
                   Login
@@ -327,12 +326,12 @@ export default function AnonNeobankUI() {
             )}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Email Address</label>
+                <label className="block text-sm font-medium mb-2 text-gray-400">Email Address</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500"
+                  className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:outline-none focus:border-[#a3ff12] text-white"
                   placeholder="your@email.com"
                   disabled={loading}
                 />
@@ -340,7 +339,7 @@ export default function AnonNeobankUI() {
               <button
                 onClick={handleCreateAccount}
                 disabled={loading || !email}
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition disabled:opacity-50 flex items-center justify-center"
+                className="w-full bg-[#a3ff12] text-black py-3 rounded-lg font-semibold hover:bg-[#8fe000] transition disabled:opacity-50 flex items-center justify-center"
               >
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 
                   isLogin ? 'Login to Account' : 'Create Account'}
@@ -357,11 +356,11 @@ export default function AnonNeobankUI() {
 
   if (step === 'verify-otp') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black text-white flex items-center justify-center">
-        <div className="max-w-md w-full mx-4 bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/20">
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="max-w-md w-full mx-4 bg-[#1a1a1a] rounded-lg p-8 border border-gray-800">
           <h2 className="text-2xl font-bold mb-6 text-center">Verify Your Email</h2>
           <p className="text-gray-400 mb-6 text-center">
-            Code sent to <span className="text-purple-400">{email}</span>
+            Code sent to <span className="text-[#a3ff12]">{email}</span>
           </p>
           {error && (
             <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-sm">
@@ -370,12 +369,12 @@ export default function AnonNeobankUI() {
           )}
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Enter OTP</label>
+              <label className="block text-sm font-medium mb-2 text-gray-400">Enter OTP</label>
               <input
                 type="text"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500 text-center text-2xl tracking-widest"
+                className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:outline-none focus:border-[#a3ff12] text-center text-2xl tracking-widest text-white"
                 placeholder="000000"
                 maxLength={6}
                 disabled={loading}
@@ -384,7 +383,7 @@ export default function AnonNeobankUI() {
             <button
               onClick={handleVerifyOtp}
               disabled={loading || otp.length !== 6}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition disabled:opacity-50 flex items-center justify-center"
+              className="w-full bg-[#a3ff12] text-black py-3 rounded-lg font-semibold hover:bg-[#8fe000] transition disabled:opacity-50 flex items-center justify-center"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify'}
             </button>
@@ -396,11 +395,11 @@ export default function AnonNeobankUI() {
 
   if (step === 'dashboard') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black text-white">
-        <nav className="border-b border-gray-800 backdrop-blur-sm bg-gray-900/50">
+      <div className="min-h-screen bg-black text-white">
+        <nav className="border-b border-gray-800 bg-black">
           <div className="container mx-auto px-4 py-4 flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Shield className="w-8 h-8 text-purple-400" />
+              <Shield className="w-8 h-8 text-[#a3ff12]" />
               <span className="text-xl font-bold">Anonbank</span>
             </div>
             <div className="flex items-center space-x-4">
@@ -408,7 +407,7 @@ export default function AnonNeobankUI() {
               <WalletMultiButton />
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition text-sm"
+                className="px-4 py-2 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white rounded-lg transition text-sm border border-gray-800"
               >
                 Logout
               </button>
@@ -418,20 +417,20 @@ export default function AnonNeobankUI() {
 
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto mb-8">
-            <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-8 shadow-2xl">
+            <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-8">
               <div className="mb-6">
-                <p className="text-purple-100 text-sm mb-2">Grid Account</p>
+                <p className="text-gray-400 text-sm mb-2">Grid Account</p>
                 <h2 className="text-3xl font-bold">${balance.toFixed(2)}</h2>
-                <p className="text-purple-100 text-sm mt-2">{userState?.address.slice(0, 8)}...</p>
+                <p className="text-gray-500 text-sm mt-2">{userState?.address.slice(0, 8)}...</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+              <div className="bg-black rounded-lg p-4 border border-gray-800">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-purple-100 text-sm">USDC Balance</span>
+                  <span className="text-gray-400 text-sm">USDC Balance</span>
                   <span className="text-white font-bold">${usdcBalance.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-purple-100 text-sm">Yield Earned</span>
-                  <span className="text-green-300 font-semibold">+${yieldEarned.toFixed(2)}</span>
+                  <span className="text-gray-400 text-sm">Yield Earned</span>
+                  <span className="text-[#a3ff12] font-semibold">+${yieldEarned.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -444,14 +443,14 @@ export default function AnonNeobankUI() {
           )}
 
           <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/20">
+            <div className="bg-[#1a1a1a] rounded-lg p-6 border border-gray-800">
               <h3 className="text-xl font-bold mb-4 flex items-center space-x-2">
-                <TrendingUp className="w-6 h-6 text-purple-400" />
+                <TrendingUp className="w-6 h-6 text-[#a3ff12]" />
                 <span>Convert to Yield</span>
               </h3>
               <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                 <p className="text-xs text-yellow-300 mb-1">⚠️ Mainnet Only Feature</p>
-                <p className="text-xs text-gray-300">
+                <p className="text-xs text-gray-400">
                   USDC+ conversion requires mainnet-beta. Currently on devnet for testing.
                 </p>
               </div>
@@ -460,12 +459,12 @@ export default function AnonNeobankUI() {
               </p>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Amount (USDC)</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-400">Amount (USDC)</label>
                   <input
                     type="number"
                     value={convertAmount}
                     onChange={(e) => setConvertAmount(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500"
+                    className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:outline-none focus:border-[#a3ff12] text-white"
                     placeholder="0.00"
                     step="0.01"
                     disabled={loading}
@@ -474,7 +473,7 @@ export default function AnonNeobankUI() {
                 <button
                   onClick={handleConvertToYield}
                   disabled={loading || !convertAmount || !connected}
-                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition disabled:opacity-50 flex items-center justify-center"
+                  className="w-full bg-[#a3ff12] text-black py-3 rounded-lg font-semibold hover:bg-[#8fe000] transition disabled:opacity-50 flex items-center justify-center"
                 >
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 
                    !connected ? 'Connect Wallet' : 'Convert to USDC+'}
@@ -482,9 +481,9 @@ export default function AnonNeobankUI() {
               </div>
             </div>
 
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/20">
+            <div className="bg-[#1a1a1a] rounded-lg p-6 border border-gray-800">
               <h3 className="text-xl font-bold mb-4 flex items-center space-x-2">
-                <Send className="w-6 h-6 text-purple-400" />
+                <Send className="w-6 h-6 text-[#a3ff12]" />
                 <span>Send Money</span>
               </h3>
               <p className="text-sm text-gray-400 mb-4">
@@ -492,24 +491,24 @@ export default function AnonNeobankUI() {
               </p>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Amount (USDC)</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-400">Amount (USDC)</label>
                   <input
                     type="number"
                     value={transferAmount}
                     onChange={(e) => setTransferAmount(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500"
+                    className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:outline-none focus:border-[#a3ff12] text-white"
                     placeholder="0.00"
                     step="0.01"
                     disabled={loading}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Recipient</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-400">Recipient</label>
                   <input
                     type="text"
                     value={recipient}
                     onChange={(e) => setRecipient(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500"
+                    className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:outline-none focus:border-[#a3ff12] text-white"
                     placeholder="Address..."
                     disabled={loading}
                   />
@@ -517,7 +516,7 @@ export default function AnonNeobankUI() {
                 <button
                   onClick={handleTransfer}
                   disabled={loading || !transferAmount || !recipient}
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition disabled:opacity-50 flex items-center justify-center"
+                  className="w-full bg-[#a3ff12] text-black py-3 rounded-lg font-semibold hover:bg-[#8fe000] transition disabled:opacity-50 flex items-center justify-center"
                 >
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send'}
                 </button>
@@ -525,9 +524,9 @@ export default function AnonNeobankUI() {
             </div>
           </div>
 
-          <div className="max-w-4xl mx-auto mt-8 bg-purple-900/30 backdrop-blur-sm border border-purple-500/30 rounded-lg p-4">
+          <div className="max-w-4xl mx-auto mt-8 bg-[#1a1a1a] border border-gray-800 rounded-lg p-4">
             <div className="flex items-start space-x-3">
-              <EyeOff className="w-5 h-5 text-purple-400 mt-0.5" />
+              <EyeOff className="w-5 h-5 text-[#a3ff12] mt-0.5" />
               <div>
                 <p className="text-sm font-medium">Private Transfers Coming Soon</p>
                 <p className="text-xs text-gray-400 mt-1">
