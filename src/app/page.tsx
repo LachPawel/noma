@@ -8,8 +8,6 @@ import { Flame, Heart, Share2, Smartphone, X, Zap } from 'lucide-react';
 
 import VideoBackground from '@/components/VideoBackground';
 import Dashboard from '@/components/Dashboard';
-import AmbientSound from '@/components/AmbientSound';
-import SoundControl from '@/components/SoundControl';
 import {
 	Dialog,
 	DialogClose,
@@ -53,7 +51,7 @@ const anarchyTexts = [
 ];
 
 export default function Home() {
-	const { connected, publicKey, signTransaction } = useWallet();
+	const { connected, publicKey, signTransaction, disconnect, connect, wallets, select } = useWallet();
 
 	const [view, setView] = useState<View>('landing');
 	const [manifestoOpen, setManifestoOpen] = useState(false);
@@ -74,6 +72,15 @@ export default function Home() {
 			setView('dashboard');
 		}
 	}, [connected, publicKey, view]);
+
+	// Additional check on mount to handle already-connected wallets
+	useEffect(() => {
+		console.log('Component mounted, checking wallet connection...');
+		if (connected && publicKey) {
+			console.log('Wallet already connected on mount, redirecting...');
+			setView('dashboard');
+		}
+	}, [connected, publicKey]);
 
 	const loadBalances = useCallback(async () => {
 		const address = publicKey?.toString();
@@ -192,12 +199,41 @@ export default function Home() {
 		setShowPwaBanner(false);
 	};
 
-	const handleLogout = () => {
+	const handleLogout = async () => {
+		// Disconnect the wallet
+		try {
+			await disconnect();
+		} catch (error) {
+			console.log('Error disconnecting wallet:', error);
+		}
+		
+		// Reset all state
 		setBalance(0);
 		setUsdcBalance(0);
 		setYieldEarned(0);
 		setView('landing');
 		setError('');
+	};
+
+	const handleEnterApp = async () => {
+		try {
+			// Try to connect to a previously used wallet or the first available one
+			if (wallets.length > 0) {
+				// Look for Phantom wallet first (most common), then fallback to first available
+				const phantomWallet = wallets.find(wallet => 
+					wallet.adapter.name.toLowerCase().includes('phantom')
+				);
+				const targetWallet = phantomWallet || wallets[0];
+				
+				select(targetWallet.adapter.name);
+				await connect();
+			} else {
+				console.log('No wallets available');
+			}
+		} catch (error) {
+			console.log('Error connecting wallet:', error);
+			// If auto-connect fails, the user can still use the WalletMultiButton when connected
+		}
 	};
 
 	const handleTransfer = useCallback(
@@ -295,8 +331,6 @@ export default function Home() {
 		return (
 			<div className="relative min-h-screen overflow-hidden bg-black text-white">
 				<VideoBackground />
-				<AmbientSound />
-				<SoundControl />
 				<div className="relative z-10">
 					<Dashboard
 						onBack={handleLogout}
@@ -320,8 +354,6 @@ export default function Home() {
 	return (
 		<div className="relative min-h-screen overflow-hidden bg-black text-white">
 			<VideoBackground />
-			<AmbientSound />
-			<SoundControl />
 
 			<div className="fixed top-0 left-0 right-0 z-50">
 				<div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-3 font-mono text-[0.6rem] uppercase tracking-widest text-white/60 sm:px-6 sm:py-4 sm:text-xs">
@@ -417,15 +449,16 @@ export default function Home() {
 				</div>
 
 				<div className="fade-in-cta mb-6 flex flex-col gap-3 px-4 sm:flex-row sm:gap-4">
-					<div className="brutal-btn-primary px-8 py-3 text-sm font-black uppercase tracking-[0.2em] sm:px-8 sm:py-3 sm:text-sm md:text-base">
-						{!connected ? (
-							<WalletMultiButton className="!bg-transparent !border-none !text-inherit !font-inherit !p-0 !m-0 !h-auto !min-h-0 !rounded-none hover:!bg-transparent focus:!bg-transparent">
-								&gt; ENTER APP
-							</WalletMultiButton>
-						) : (
-							<WalletMultiButton className="!bg-transparent !border-none !text-inherit !font-inherit !p-0 !m-0 !h-auto !min-h-0 !rounded-none hover:!bg-transparent focus:!bg-transparent" />
-						)}
-					</div>
+					{!connected ? (
+						<button
+							onClick={handleEnterApp}
+							className="brutal-btn-primary px-8 py-3 text-sm font-black uppercase tracking-[0.2em] sm:px-8 sm:py-3 sm:text-sm md:text-base"
+						>
+							&gt; ENTER APP
+						</button>
+					) : (
+						<WalletMultiButton className="brutal-btn-primary !bg-transparent !border-none !text-inherit !font-inherit !p-0 !m-0 !h-auto !min-h-0 !rounded-none hover:!bg-transparent focus:!bg-transparent px-8 py-3 text-sm font-black uppercase tracking-[0.2em] sm:px-8 sm:py-3 sm:text-sm md:text-base" />
+					)}
 					<button
 						onClick={() => setManifestoOpen(true)}
 						className="brutal-btn-ghost px-8 py-3 text-sm font-black uppercase tracking-[0.2em] sm:px-8 sm:py-3 sm:text-sm md:text-base"
@@ -473,17 +506,15 @@ export default function Home() {
 					<DialogTitle className="sr-only">NOMA Manifesto</DialogTitle>
 					<DialogDescription className="sr-only">Watch the NOMA manifesto</DialogDescription>
 
-					<DialogClose className="absolute right-2 top-2 flex items-center justify-center border border-white/30 bg-black/80 p-2 text-white/70 transition-colors hover:text-white">
-						<X className="h-5 w-5" />
-					</DialogClose>
-
 					<div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-						<iframe
+						<video
 							className="absolute left-0 top-0 h-full w-full border-2 border-white/20"
-							src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0"
+							src="/1029_480.mov"
 							title="NOMA MANIFESTO"
-							allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-							allowFullScreen
+							controls
+							autoPlay
+							muted
+							playsInline
 						/>
 					</div>
 				</DialogContent>
