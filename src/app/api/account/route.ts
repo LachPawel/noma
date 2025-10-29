@@ -69,13 +69,10 @@ export async function POST(request: NextRequest) {
           );
         }
         
-        const transferSignature = await sdk.createRegularTransfer(
-          body.userState,
-          body.recipient,
-          body.amount,
-          body.mint
+        return NextResponse.json(
+          { error: 'Transfers require Grid authentication. Wallet-only transfers coming soon.' },
+          { status: 501 }
         );
-        return NextResponse.json({ signature: transferSignature });
       }
 
       case 'history': {

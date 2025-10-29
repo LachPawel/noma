@@ -9,7 +9,14 @@ const STORAGE_KEY = 'ambient-sound-muted-v2';
 
 const getStoredMutePreference = () => {
   if (typeof window === 'undefined') return false;
-  return window.localStorage.getItem(STORAGE_KEY) === 'true';
+  
+  // Check if this is the first visit (no stored preference)
+  const stored = window.localStorage.getItem(STORAGE_KEY);
+  if (stored === null) {
+    // First visit - default to playing (not muted)
+    return false;
+  }
+  return stored === 'true';
 };
 
 export default function SoundControl() {

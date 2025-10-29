@@ -126,7 +126,15 @@ export default function AmbientSound({
       }
     };
 
-    const initialMute = window.localStorage.getItem(STORAGE_KEY) === 'true';
+    const initialMute = (() => {
+      const stored = window.localStorage.getItem(STORAGE_KEY);
+      if (stored === null) {
+        // First visit - default to playing (not muted)
+        window.localStorage.setItem(STORAGE_KEY, 'false');
+        return false;
+      }
+      return stored === 'true';
+    })();
     audio.muted = initialMute;
 
     if (!initialMute) {

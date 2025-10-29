@@ -4,10 +4,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { VersionedTransaction } from '@solana/web3.js';
-import { ArrowLeft, Flame, Heart, Share2, Smartphone, X, Zap } from 'lucide-react';
+import { Flame, Heart, Share2, Smartphone, X, Zap } from 'lucide-react';
 
 import VideoBackground from '@/components/VideoBackground';
 import Dashboard from '@/components/Dashboard';
+import AmbientSound from '@/components/AmbientSound';
+import SoundControl from '@/components/SoundControl';
 import {
 	Dialog,
 	DialogClose,
@@ -15,11 +17,8 @@ import {
 	DialogDescription,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
-type View = 'landing' | 'auth' | 'dashboard';
-type AuthStep = 'welcome' | 'email' | 'otp';
-type AuthMode = 'signup' | 'login';
+type View = 'landing' | 'dashboard';
 
 type TokenBalance = {
 	symbol?: string;
@@ -34,26 +33,6 @@ type GlitchText = {
 	y: number;
 	size: number;
 };
-
-interface UserState {
-	address: string;
-	authentication?: unknown;
-	sessionSecrets?: unknown;
-	email?: string;
-}
-
-interface PendingUserData {
-	user: unknown;
-	sessionSecrets: unknown;
-	email: string;
-	isNewUser: boolean;
-}
-
-interface StoredSession {
-	userState: UserState;
-	email: string;
-	timestamp: number;
-}
 
 interface BeforeInstallPromptEvent extends Event {
 	prompt: () => Promise<void>;
@@ -77,16 +56,10 @@ export default function Home() {
 	const { connected, publicKey, signTransaction } = useWallet();
 
 	const [view, setView] = useState<View>('landing');
-	const [authStep, setAuthStep] = useState<AuthStep>('welcome');
-	const [authMode, setAuthMode] = useState<AuthMode>('signup');
-	const [email, setEmail] = useState('');
-	const [otp, setOtp] = useState('');
 	const [manifestoOpen, setManifestoOpen] = useState(false);
 	const [showPwaBanner, setShowPwaBanner] = useState(false);
 	const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 	const [glitchTexts, setGlitchTexts] = useState<GlitchText[]>([]);
-	const [userState, setUserState] = useState<UserState | null>(null);
-	const [userData, setUserData] = useState<PendingUserData | null>(null);
 	const [balance, setBalance] = useState(0);
 	const [usdcBalance, setUsdcBalance] = useState(0);
 	const [yieldEarned, setYieldEarned] = useState(0);
@@ -96,32 +69,14 @@ export default function Home() {
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
 
-		const savedSession = window.localStorage.getItem('anonbank_session');
-		if (!savedSession) return;
-
-		try {
-			const session = JSON.parse(savedSession) as StoredSession;
-			const sessionAge = Date.now() - (session.timestamp ?? 0);
-			const maxAge = 7 * 24 * 60 * 60 * 1000;
-			if (sessionAge > maxAge) {
-				window.localStorage.removeItem('anonbank_session');
-				return;
-			}
-
-			if (session.userState && session.email) {
-				setUserState(session.userState);
-				setEmail(session.email);
-				setView('dashboard');
-				setAuthStep('welcome');
-			}
-		} catch (err) {
-			console.error('Failed to restore session:', err);
-			window.localStorage.removeItem('anonbank_session');
+		// Auto-redirect to dashboard if wallet is connected
+		if (connected && publicKey && view === 'landing') {
+			setView('dashboard');
 		}
-	}, []);
+	}, [connected, publicKey, view]);
 
 	const loadBalances = useCallback(async () => {
-		const address = userState?.address ?? publicKey?.toString();
+		const address = publicKey?.toString();
 		if (!address) {
 			return;
 		}
@@ -143,7 +98,7 @@ export default function Home() {
 		} catch (err) {
 			console.error('Failed to load balances:', err);
 		}
-	}, [publicKey, userState?.address]);
+	}, [publicKey]);
 
 	useEffect(() => {
 		if (view !== 'dashboard') return;
@@ -178,7 +133,7 @@ export default function Home() {
 				word.classList.add('animate-word-appear');
 			}, delay);
 		});
-	}, [view, authStep]);
+	}, [view]);
 
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
@@ -237,124 +192,19 @@ export default function Home() {
 		setShowPwaBanner(false);
 	};
 
-	const startAuthFlow = (mode: AuthMode) => {
-		setAuthMode(mode);
-		setAuthStep('email');
-		setError('');
-		setEmail('');
-		setOtp('');
-	};
-
-	const handleRequestOtp = async () => {
-		if (!email || !email.includes('@')) {
-			return;
-		}
-
-		setLoading(true);
-		setError('');
-
-		try {
-			const response = await fetch('/api/account', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					action: authMode === 'login' ? 'login' : 'create',
-					email,
-				}),
-			});
-
-			if (!response.ok) {
-				throw new Error(authMode === 'login' ? 'Login failed' : 'Failed to create account');
-			}
-
-			const data = (await response.json()) as { user: unknown; sessionSecrets: unknown };
-			setUserData({
-				user: data.user,
-				sessionSecrets: data.sessionSecrets,
-				email,
-				isNewUser: authMode !== 'login',
-			});
-			setAuthStep('otp');
-		} catch (err) {
-			setError(err instanceof Error ? err.message : 'An error occurred');
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	const handleVerifyOtp = async () => {
-		if (!otp || otp.length !== 6 || !userData) {
-			return;
-		}
-
-		setLoading(true);
-		setError('');
-
-		try {
-			const response = await fetch('/api/account', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					action: 'verify',
-					otpCode: otp,
-					user: userData.user,
-					sessionSecrets: userData.sessionSecrets,
-					email: userData.email,
-					isNewUser: userData.isNewUser,
-				}),
-			});
-
-			if (!response.ok) {
-				throw new Error('OTP verification failed');
-			}
-
-			const result = (await response.json()) as UserState;
-			setUserState(result);
-			setUserData(null);
-			setOtp('');
-			setView('dashboard');
-			setAuthStep('welcome');
-
-			if (typeof window !== 'undefined') {
-				const session: StoredSession = {
-					userState: result,
-					email: userData.email,
-					timestamp: Date.now(),
-				};
-				window.localStorage.setItem('anonbank_session', JSON.stringify(session));
-			}
-
-			await loadBalances();
-		} catch (err) {
-			setError(err instanceof Error ? err.message : 'An error occurred');
-		} finally {
-			setLoading(false);
-		}
-	};
-
 	const handleLogout = () => {
-		if (typeof window !== 'undefined') {
-			window.localStorage.removeItem('anonbank_session');
-		}
-
-		setUserState(null);
-		setUserData(null);
-		setEmail('');
-		setOtp('');
 		setBalance(0);
 		setUsdcBalance(0);
 		setYieldEarned(0);
 		setView('landing');
-		setAuthStep('welcome');
-		setAuthMode('signup');
 		setError('');
 	};
 
 	const handleTransfer = useCallback(
 		async (amount: string, destination: string): Promise<boolean> => {
 			const parsedAmount = parseFloat(amount);
-			if (!userState) {
-				setError('Complete email login to send funds.');
+			if (!publicKey || !connected) {
+				setError('Connect wallet to send funds.');
 				return false;
 			}
 			if (!destination || Number.isNaN(parsedAmount) || parsedAmount <= 0) {
@@ -363,43 +213,11 @@ export default function Home() {
 			}
 
 			setLoading(true);
-			setError('');
-
-			try {
-				const response = await fetch('/api/account', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						action: 'transfer',
-						userState,
-						recipient: destination,
-						amount: parsedAmount * 1_000_000,
-						mint: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
-						usePrivacy: false,
-					}),
-				});
-
-				if (!response.ok) {
-					throw new Error('Transfer failed');
-				}
-
-				const result = await response.json();
-				if (result.signature) {
-					window.alert(`Transfer successful! Signature: ${result.signature}`);
-					await loadBalances();
-					setError('');
-					return true;
-				}
-
-				throw new Error(result.error || 'Transfer failed');
-			} catch (err) {
-				setError(err instanceof Error ? err.message : 'Transfer failed');
-				return false;
-			} finally {
-				setLoading(false);
-			}
+			setError('Wallet-only transfers coming soon. For now, you can only view balances.');
+			setLoading(false);
+			return false;
 		},
-		[loadBalances, userState],
+		[publicKey, connected],
 	);
 
 	const handleConvertToYield = useCallback(
@@ -468,7 +286,7 @@ export default function Home() {
 		[loadBalances, publicKey, signTransaction],
 	);
 
-	const currentWalletAddress = userState?.address ?? publicKey?.toString() ?? null;
+	const currentWalletAddress = publicKey?.toString() ?? null;
 	const totalBalance = balance + usdcBalance;
 	const isIOSDevice = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
 	const currentTime = new Date().toLocaleTimeString();
@@ -477,6 +295,8 @@ export default function Home() {
 		return (
 			<div className="relative min-h-screen overflow-hidden bg-black text-white">
 				<VideoBackground />
+				<AmbientSound />
+				<SoundControl />
 				<div className="relative z-10">
 					<Dashboard
 						onBack={handleLogout}
@@ -497,194 +317,11 @@ export default function Home() {
 		);
 	}
 
-	if (view === 'auth') {
-		return (
-			<div className="relative min-h-screen overflow-hidden bg-black text-white">
-				<VideoBackground />
-
-				<div className="corner-bracket corner-tl" />
-				<div className="corner-bracket corner-tr" />
-				<div className="corner-bracket corner-bl" />
-				<div className="corner-bracket corner-br" />
-
-				<div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-3 py-3 font-mono text-[0.6rem] uppercase tracking-widest text-white/60 sm:px-6 sm:py-4 sm:text-xs md:text-sm">
-					<div className="flex items-center gap-2 sm:gap-4 md:gap-8">
-						<span className="font-bold text-white">&gt; SURVEILLANCE_OFF</span>
-						<span className="hidden text-white/40 sm:inline">|</span>
-						<span className="hidden font-bold text-white md:inline">&gt; ENCRYPTED</span>
-						<span className="hidden text-white/40 md:inline">|</span>
-						<span className="hidden font-bold text-white md:inline">&gt; ANONYMOUS</span>
-					</div>
-					<div className="flex items-center gap-2">
-						<div className="h-2 w-2 animate-pulse rounded-full bg-white" />
-						<span className="font-bold text-white">LIVE</span>
-					</div>
-				</div>
-
-				<div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 py-20">
-					<div className="w-full max-w-md space-y-8">
-						{authStep === 'welcome' && (
-							<div className="space-y-8 text-center animate-fade-in">
-								<div className="space-y-2">
-									<h1
-										className="brutal-glitch text-white"
-										style={{ fontFamily: 'Anton, sans-serif', fontSize: 'clamp(4rem, 15vw, 8rem)', lineHeight: '0.9' }}
-									>
-										NOMA
-									</h1>
-									<p
-										className="text-white/90 font-mono font-bold tracking-[0.3em] uppercase"
-										style={{ fontSize: 'clamp(0.75rem, 3vw, 1.5rem)' }}
-									>
-										CASH
-									</p>
-								</div>
-
-								<div className="mt-12 space-y-4">
-									<button
-										onClick={() => startAuthFlow('signup')}
-										className="w-full border-4 border-white/30 bg-red-600 px-4 py-4 text-lg font-black uppercase tracking-wider text-white transition-colors hover:bg-red-700"
-										style={{ fontFamily: 'Anton, sans-serif' }}
-									>
-										SIGN UP
-									</button>
-									<button
-										onClick={() => startAuthFlow('login')}
-										className="w-full border-4 border-white/30 bg-white/10 px-4 py-4 text-lg font-black uppercase tracking-wider text-white transition-colors hover:bg-white/20"
-										style={{ fontFamily: 'Anton, sans-serif' }}
-									>
-										LOGIN
-									</button>
-								</div>
-
-								<button
-									onClick={() => setView('landing')}
-									className="mx-auto mt-8 flex items-center justify-center gap-2 font-mono text-xs uppercase tracking-wider text-white/60 transition-colors hover:text-white"
-								>
-									<ArrowLeft className="h-4 w-4" /> BACK TO HOME
-								</button>
-							</div>
-						)}
-
-						{authStep === 'email' && (
-							<div className="space-y-6 animate-fade-in">
-								<div className="space-y-2 text-center">
-									<h2
-										className="text-white brutal-glitch"
-										style={{ fontFamily: 'Anton, sans-serif', fontSize: 'clamp(2rem, 8vw, 3rem)' }}
-									>
-										{authMode === 'signup' ? 'CREATE ACCOUNT' : 'LOGIN'}
-									</h2>
-									<p className="font-mono text-xs uppercase tracking-wider text-white/60">ENTER YOUR EMAIL</p>
-								</div>
-
-								{error && (
-									<div className="rounded-none border border-red-600 bg-red-500/10 p-3 text-center font-mono text-xs uppercase tracking-wider text-red-400">
-										{error}
-									</div>
-								)}
-
-								<input
-									type="email"
-									placeholder="your@email.com"
-									value={email}
-									onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)}
-									onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
-										if (event.key === 'Enter') {
-											event.preventDefault();
-											handleRequestOtp();
-										}
-									}}
-									disabled={loading}
-									className="w-full border-4 border-white/30 bg-black px-4 py-6 font-mono text-lg text-white placeholder:text-white/40 focus:border-red-600"
-								/>
-
-								<button
-									onClick={handleRequestOtp}
-									disabled={loading || !email || !email.includes('@')}
-									className="w-full border-4 border-white/30 bg-red-600 px-4 py-4 text-lg font-black uppercase tracking-wider text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-white/10"
-									style={{ fontFamily: 'Anton, sans-serif' }}
-								>
-									{authMode === 'signup' ? 'CREATE ACCOUNT' : 'LOGIN TO ACCOUNT'}
-								</button>
-
-								<button
-									onClick={() => setAuthStep('welcome')}
-									className="flex w-full items-center justify-center gap-2 font-mono text-xs uppercase tracking-wider text-white/60 transition-colors hover:text-white"
-								>
-									<ArrowLeft className="h-4 w-4" /> BACK
-								</button>
-							</div>
-						)}
-
-						{authStep === 'otp' && (
-							<div className="space-y-6 animate-fade-in">
-								<div className="space-y-2 text-center">
-									<h2
-										className="text-white brutal-glitch"
-										style={{ fontFamily: 'Anton, sans-serif', fontSize: 'clamp(2rem, 8vw, 3rem)' }}
-									>
-										VERIFY EMAIL
-									</h2>
-									<p className="font-mono text-xs uppercase tracking-wider text-white/60">CODE SENT TO</p>
-									<p className="font-mono text-sm text-red-500">{email}</p>
-								</div>
-
-								{error && (
-									<div className="rounded-none border border-red-600 bg-red-500/10 p-3 text-center font-mono text-xs uppercase tracking-wider text-red-400">
-										{error}
-									</div>
-								)}
-
-								<div className="flex justify-center">
-									<InputOTP
-										maxLength={6}
-										value={otp}
-										onChange={(value: string) => setOtp(value.replace(/\D/g, '').slice(0, 6))}
-										onComplete={handleVerifyOtp}
-									>
-										<InputOTPGroup className="gap-2">
-											{Array.from({ length: 6 }).map((_, index) => (
-												<InputOTPSlot
-													key={`otp-slot-${index}`}
-													index={index}
-													className="h-16 w-14 border-2 border-white/30 bg-black text-2xl font-mono text-white focus:border-red-600"
-												/>
-											))}
-										</InputOTPGroup>
-									</InputOTP>
-								</div>
-
-								<button
-									onClick={handleVerifyOtp}
-									disabled={loading || otp.length !== 6}
-									className="w-full border-4 border-white/30 bg-red-600 px-4 py-4 text-lg font-black uppercase tracking-wider text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-white/10"
-									style={{ fontFamily: 'Anton, sans-serif' }}
-								>
-									VERIFY
-								</button>
-
-								<button
-									onClick={() => {
-										setAuthStep('email');
-										setOtp('');
-										setError('');
-									}}
-									className="flex w-full items-center justify-center gap-2 font-mono text-xs uppercase tracking-wider text-white/60 transition-colors hover:text-white"
-								>
-									<ArrowLeft className="h-4 w-4" /> BACK TO EMAIL
-								</button>
-							</div>
-						)}
-					</div>
-				</div>
-			</div>
-		);
-	}
-
 	return (
 		<div className="relative min-h-screen overflow-hidden bg-black text-white">
 			<VideoBackground />
+			<AmbientSound />
+			<SoundControl />
 
 			<div className="fixed top-0 left-0 right-0 z-50">
 				<div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-3 font-mono text-[0.6rem] uppercase tracking-widest text-white/60 sm:px-6 sm:py-4 sm:text-xs">
@@ -780,16 +417,15 @@ export default function Home() {
 				</div>
 
 				<div className="fade-in-cta mb-6 flex flex-col gap-3 px-4 sm:flex-row sm:gap-4">
-					<button
-						onClick={() => {
-							setView('auth');
-							setAuthStep('welcome');
-							setError('');
-						}}
-						className="brutal-btn-primary px-8 py-3 text-sm font-black uppercase tracking-[0.2em] sm:px-8 sm:py-3 sm:text-sm md:text-base"
-					>
-						&gt; ENTER APP
-					</button>
+					<div className="brutal-btn-primary px-8 py-3 text-sm font-black uppercase tracking-[0.2em] sm:px-8 sm:py-3 sm:text-sm md:text-base">
+						{!connected ? (
+							<WalletMultiButton className="!bg-transparent !border-none !text-inherit !font-inherit !p-0 !m-0 !h-auto !min-h-0 !rounded-none hover:!bg-transparent focus:!bg-transparent">
+								&gt; ENTER APP
+							</WalletMultiButton>
+						) : (
+							<WalletMultiButton className="!bg-transparent !border-none !text-inherit !font-inherit !p-0 !m-0 !h-auto !min-h-0 !rounded-none hover:!bg-transparent focus:!bg-transparent" />
+						)}
+					</div>
 					<button
 						onClick={() => setManifestoOpen(true)}
 						className="brutal-btn-ghost px-8 py-3 text-sm font-black uppercase tracking-[0.2em] sm:px-8 sm:py-3 sm:text-sm md:text-base"
