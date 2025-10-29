@@ -7,7 +7,7 @@ import AmbientSound from '@/components/AmbientSound'
 import SoundControl from '@/components/SoundControl'
 
 export const metadata = {
-  title: 'Anonbank - Privacy-First Neobank',
+  title: 'Noma.cash - Privacy-First Neobank',
   description: 'Earn yield on stablecoins with financial privacy',
 }
 

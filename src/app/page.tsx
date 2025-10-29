@@ -1,594 +1,944 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { VersionedTransaction } from '@solana/web3.js';
-import { EyeOff, TrendingUp, Send, Shield, Banknote, Loader2 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import GlassCard from '@/components/GlassCard';
-import CyberButton from '@/components/CyberButton';
-import FeatureCard from '@/components/FeatureCard';
-import CyberInput from '@/components/CyberInput';
-import CyberBackground from '@/components/CyberBackground';
+import { ArrowLeft, Flame, Heart, Share2, Smartphone, X, Zap } from 'lucide-react';
+
+import VideoBackground from '@/components/VideoBackground';
+import Dashboard from '@/components/Dashboard';
+import {
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogTitle,
+} from '@/components/ui/dialog';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+
+type View = 'landing' | 'auth' | 'dashboard';
+type AuthStep = 'welcome' | 'email' | 'otp';
+type AuthMode = 'signup' | 'login';
+
+type TokenBalance = {
+	symbol?: string;
+	mint?: string;
+	amount?: number;
+};
+
+type GlitchText = {
+	id: number;
+	text: string;
+	x: number;
+	y: number;
+	size: number;
+};
+
+interface UserState {
+	address: string;
+	authentication?: unknown;
+	sessionSecrets?: unknown;
+	email?: string;
+}
+
+interface PendingUserData {
+	user: unknown;
+	sessionSecrets: unknown;
+	email: string;
+	isNewUser: boolean;
+}
+
+interface StoredSession {
+	userState: UserState;
+	email: string;
+	timestamp: number;
+}
+
+interface BeforeInstallPromptEvent extends Event {
+	prompt: () => Promise<void>;
+	userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
+
+const anarchyTexts = [
+	'FUCK THE SYSTEM',
+	'FUCK CENSORSHIP',
+	'FUCK REGIMES',
+	'THEY CANT CONTROL US',
+	'NO MASTERS NO SLAVES',
+	'PRIVACY IS A RIGHT',
+	'RESIST',
+	'ANONYMOUS',
+	'UNGOVERNABLE',
+	'NO SURVEILLANCE',
+];
 
 export default function Home() {
-  const { connected, publicKey, signTransaction } = useWallet();
-  const [step, setStep] = useState<'landing' | 'verify-otp' | 'dashboard'>('landing');
-  const [isLogin, setIsLogin] = useState(false);
-  const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [userData, setUserData] = useState<any>(null);
-  const [userState, setUserState] = useState<any>(null);
-  const [balance, setBalance] = useState(0);
-  const [usdcBalance, setUsdcBalance] = useState(0);
-  const [yieldEarned, setYieldEarned] = useState(0);
-  const [convertAmount, setConvertAmount] = useState('');
-  const [transferAmount, setTransferAmount] = useState('');
-  const [recipient, setRecipient] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+	const { connected, publicKey, signTransaction } = useWallet();
 
-  // Load session from localStorage on mount
-  useEffect(() => {
-    const savedSession = localStorage.getItem('anonbank_session');
-    if (savedSession) {
-      try {
-        const session = JSON.parse(savedSession);
-        
-        // Check if session has expired (7 days = 604800000 ms)
-        const sessionAge = Date.now() - (session.timestamp || 0);
-        const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
-        
-        if (sessionAge > maxAge) {
-          // Session expired, clear it
-          localStorage.removeItem('anonbank_session');
-          return;
-        }
-        
-        // Session is valid, restore it
-        if (session.userState && session.email) {
-          setUserState(session.userState);
-          setEmail(session.email);
-          setStep('dashboard');
-        }
-      } catch (err) {
-        console.error('Failed to load session:', err);
-        localStorage.removeItem('anonbank_session');
-      }
-    }
-  }, []);
+	const [view, setView] = useState<View>('landing');
+	const [authStep, setAuthStep] = useState<AuthStep>('welcome');
+	const [authMode, setAuthMode] = useState<AuthMode>('signup');
+	const [email, setEmail] = useState('');
+	const [otp, setOtp] = useState('');
+	const [manifestoOpen, setManifestoOpen] = useState(false);
+	const [showPwaBanner, setShowPwaBanner] = useState(false);
+	const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+	const [glitchTexts, setGlitchTexts] = useState<GlitchText[]>([]);
+	const [userState, setUserState] = useState<UserState | null>(null);
+	const [userData, setUserData] = useState<PendingUserData | null>(null);
+	const [balance, setBalance] = useState(0);
+	const [usdcBalance, setUsdcBalance] = useState(0);
+	const [yieldEarned, setYieldEarned] = useState(0);
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (connected && step === 'dashboard') {
-      loadBalances();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connected]);
+	useEffect(() => {
+		if (typeof window === 'undefined') return;
 
-  const handleCreateAccount = async () => {
-    if (!email) return;
-    setLoading(true);
-    setError('');
+		const savedSession = window.localStorage.getItem('anonbank_session');
+		if (!savedSession) return;
 
-    try {
-      const response = await fetch('/api/account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: isLogin ? 'login' : 'create', 
-          email 
-        })
-      });
+		try {
+			const session = JSON.parse(savedSession) as StoredSession;
+			const sessionAge = Date.now() - (session.timestamp ?? 0);
+			const maxAge = 7 * 24 * 60 * 60 * 1000;
+			if (sessionAge > maxAge) {
+				window.localStorage.removeItem('anonbank_session');
+				return;
+			}
 
-      if (!response.ok) throw new Error(isLogin ? 'Login failed' : 'Failed to create account');
-      
-      const data = await response.json();
-      setUserData({ ...data, isNewUser: !isLogin });
-      setStep('verify-otp');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
+			if (session.userState && session.email) {
+				setUserState(session.userState);
+				setEmail(session.email);
+				setView('dashboard');
+				setAuthStep('welcome');
+			}
+		} catch (err) {
+			console.error('Failed to restore session:', err);
+			window.localStorage.removeItem('anonbank_session');
+		}
+	}, []);
 
-  const handleVerifyOtp = async () => {
-    if (!otp || !userData) return;
-    setLoading(true);
-    setError('');
+	const loadBalances = useCallback(async () => {
+		const address = userState?.address ?? publicKey?.toString();
+		if (!address) {
+			return;
+		}
 
-    try {
-      const response = await fetch('/api/account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'verify',
-          otpCode: otp,
-          user: userData.user,
-          sessionSecrets: userData.sessionSecrets,
-          email: userData.email,
-          isNewUser: userData.isNewUser // Pass the flag to determine which flow to use
-        })
-      });
+		try {
+			const response = await fetch(`/api/account?address=${address}`);
+			if (!response.ok) {
+				throw new Error('Failed to load balances');
+			}
 
-      if (!response.ok) throw new Error('OTP verification failed');
-      
-      const result = await response.json();
-      setUserState(result);
-      setStep('dashboard');
-      
-      // Save session to localStorage
-      localStorage.setItem('anonbank_session', JSON.stringify({
-        userState: result,
-        email: userData.email,
-        timestamp: Date.now()
-      }));
-      
-      await loadBalances();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
+			const data = (await response.json()) as { sol?: number; tokens?: TokenBalance[] };
+			setBalance(data.sol ?? 0);
 
-  const handleLogout = () => {
-    // Clear session from localStorage
-    localStorage.removeItem('anonbank_session');
-    // Reset all state
-    setUserState(null);
-    setUserData(null);
-    setEmail('');
-    setOtp('');
-    setBalance(0);
-    setUsdcBalance(0);
-    setYieldEarned(0);
-    setStep('landing');
-    setError('');
-  };
+			const usdcToken = data.tokens?.find(
+				(token) => token.symbol === 'USDC' || token.mint === '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
+			);
+			setUsdcBalance(usdcToken?.amount ?? 0);
+			setYieldEarned(12.45);
+		} catch (err) {
+			console.error('Failed to load balances:', err);
+		}
+	}, [publicKey, userState?.address]);
 
-  const loadBalances = async () => {
-    if (!userState?.address && !publicKey) return;
+	useEffect(() => {
+		if (view !== 'dashboard') return;
+		void loadBalances();
+	}, [view, loadBalances, connected]);
 
-    try {
-      const response = await fetch(`/api/account?address=${userState?.address || publicKey?.toString()}`);
-      const data = await response.json();
-      setBalance(data.sol || 0);
-      
-      const usdcToken = data.tokens?.find((t: any) => 
-        t.symbol === 'USDC' || t.mint === '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'
-      );
-      setUsdcBalance(usdcToken?.amount || 0);
-      
-      setYieldEarned(12.45);
-    } catch (err) {
-      console.error('Failed to load balances:', err);
-    }
-  };
+	useEffect(() => {
+		if (typeof window === 'undefined') return;
 
-  const handleConvertToYield = async () => {
-    if (!publicKey || !signTransaction || !convertAmount) {
-      setError('Connect wallet to convert to yield-bearing stablecoin');
-      return;
-    }
+		const interval = window.setInterval(() => {
+			const count = Math.random() > 0.5 ? 2 : 1;
+			const newTexts = Array.from({ length: count }, (_, index) => ({
+				id: Date.now() + index,
+				text: anarchyTexts[Math.floor(Math.random() * anarchyTexts.length)],
+				x: Math.random() * 80 + 10,
+				y: Math.random() * 80 + 10,
+				size: Math.random() * 0.6 + 0.6,
+			}));
+			setGlitchTexts(newTexts);
+		}, 2000);
 
-    setLoading(true);
-    setError('');
+		return () => {
+			window.clearInterval(interval);
+		};
+	}, []);
 
-    try {
-      // Request transaction from API
-      const response = await fetch('/api/account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'convert',
-          publicKey: publicKey.toString(),
-          amount: parseFloat(convertAmount)
-        })
-      });
+	useEffect(() => {
+		const words = document.querySelectorAll('.word');
+		words.forEach((word) => {
+			const delay = parseInt(word.getAttribute('data-delay') ?? '0', 10);
+			window.setTimeout(() => {
+				word.classList.add('animate-word-appear');
+			}, delay);
+		});
+	}, [view, authStep]);
 
-      if (!response.ok) throw new Error('Failed to create conversion transaction');
-      
-      const { transaction: serializedTx } = await response.json();
-      
-      // Deserialize and sign the transaction
-      const transaction = VersionedTransaction.deserialize(
-        Buffer.from(serializedTx, 'base64')
-      );
-      const signed = await signTransaction(transaction);
-      
-      // Send transaction back to API for submission
-      const submitResponse = await fetch('/api/account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'submit',
-          signedTransaction: Buffer.from(signed.serialize()).toString('base64')
-        })
-      });
+	useEffect(() => {
+		if (typeof window === 'undefined') return;
 
-      const result = await submitResponse.json();
-      if (result.signature) {
-        alert('Successfully converted to USDC+! Signature: ' + result.signature);
-        setConvertAmount('');
-        await loadBalances();
-      } else {
-        throw new Error(result.error || 'Conversion failed');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
+		const isDismissed = window.localStorage.getItem('pwa-prompt-dismissed') === 'true';
+		const isStandalone =
+			window.matchMedia('(display-mode: standalone)').matches ||
+			(window.navigator as unknown as { standalone?: boolean }).standalone === true;
 
-  const handleTransfer = async () => {
-    if (!transferAmount || !recipient || !userState) return;
-    setLoading(true);
-    setError('');
+		let iosTimeoutId: number | undefined;
 
-    try {
-      const response = await fetch('/api/account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'transfer',
-          userState,
-          recipient,
-          amount: parseFloat(transferAmount) * 1_000_000,
-          mint: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
-          usePrivacy: false
-        })
-      });
+		const handleBeforeInstallPrompt = (event: Event) => {
+			event.preventDefault();
+			const promptEvent = event as BeforeInstallPromptEvent;
+			setDeferredPrompt(promptEvent);
 
-      const result = await response.json();
-      if (result.signature) {
-        alert('Transfer successful! Signature: ' + result.signature);
-        setTransferAmount('');
-        setRecipient('');
-        await loadBalances();
-      } else {
-        throw new Error(result.error || 'Transfer failed');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
+			if (!isDismissed && !isStandalone && view === 'landing') {
+				window.setTimeout(() => setShowPwaBanner(true), 3000);
+			}
+		};
 
-  if (step === 'landing') {
-    return (
-      <div className="min-h-screen cyber-bg text-white relative overflow-hidden">
-        <CyberBackground />
-        <div className="animated-grid fixed inset-0 pointer-events-none opacity-20" style={{ zIndex: 0 }} />
-        
-        <div className="container mx-auto px-4 py-20 relative" style={{ zIndex: 10 }}>
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-16"
-          >
-            <motion.div 
-              className="flex items-center justify-center mb-8"
-              animate={{ 
-                filter: ['drop-shadow(0 0 8px rgba(112, 236, 159, 0.3))', 'drop-shadow(0 0 12px rgba(112, 236, 159, 0.5))', 'drop-shadow(0 0 8px rgba(112, 236, 159, 0.3))']
-              }}
-              transition={{ duration: 3, repeat: Infinity }}
-            >
-              <Shield className="w-20 h-20 text-[#70ec9f]" strokeWidth={1.5} />
-            </motion.div>
-            <h1 className="text-6xl md:text-7xl font-bold mb-6 text-white leading-tight">
-              Autonomous money<br />designed for the<br />stablecoin era
-            </h1>
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.8 }}
-              className="text-lg text-gray-400 mb-6 max-w-4xl mx-auto uppercase tracking-wider"
-            >
-              Experience USD that automates DeFi strategy, enhances<br />
-              capital efficiency and delivers on decentralization - all<br />
-              seamlessly integrated with insurance.
-            </motion.p>
-          </motion.div>
+		window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-16">
-            <FeatureCard
-              icon={TrendingUp}
-              title="Earn Yield"
-              description="Your stablecoins automatically earn yield through DeFi strategies."
-              delay={0.1}
-            />
-            <FeatureCard
-              icon={Shield}
-              title="Private Transfers"
-              description={
-                <>
-                  Anonymous transfers with cryptographic privacy.{' '}
-                  <span className="text-[#70ec9f] font-bold">Coming Soon</span>
-                </>
-              }
-              delay={0.2}
-            />
-            <FeatureCard
-              icon={Banknote}
-              title="No Bank Required"
-              description="Open an account in minutes with just email."
-              delay={0.3}
-            />
-          </div>
+		const isIOSDevice = /iPad|iPhone|iPod/.test(window.navigator.userAgent);
+		if (!isDismissed && !isStandalone && view === 'landing' && isIOSDevice) {
+			iosTimeoutId = window.setTimeout(() => setShowPwaBanner(true), 3000);
+		}
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-          >
-            <GlassCard className="max-w-md mx-auto" variant="strong">
-              <div className="flex justify-center mb-6">
-                <div className="glass rounded-lg p-1 flex">
-                  <button
-                    onClick={() => setIsLogin(false)}
-                    className={`px-6 py-2 rounded-md transition-all duration-300 ${
-                      !isLogin ? 'cyber-button' : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    Sign Up
-                  </button>
-                  <button
-                    onClick={() => setIsLogin(true)}
-                    className={`px-6 py-2 rounded-md transition-all duration-300 ${
-                      isLogin ? 'cyber-button' : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    Login
-                  </button>
-                </div>
-              </div>
-              <h2 className="text-3xl font-bold mb-6 text-center">
-                {isLogin ? 'Welcome Back' : 'Get Started'}
-              </h2>
-              {error && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mb-4 p-3 glass-strong border-red-500 rounded-lg text-sm text-red-400"
-                >
-                  {error}
-                </motion.div>
-              )}
-              <div className="space-y-4">
-                <CyberInput
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  label="Email Address"
-                  disabled={loading}
-                />
-                <CyberButton
-                  onClick={handleCreateAccount}
-                  disabled={loading || !email}
-                  loading={loading}
-                  className="w-full"
-                >
-                  {isLogin ? 'Login to Account' : 'Create Account'}
-                </CyberButton>
-                <p className="text-xs text-gray-500 text-center">
-                  {isLogin ? 'We\'ll send an OTP to verify your email' : 'By creating an account, you agree to our privacy-first principles'}
-                </p>
-              </div>
-            </GlassCard>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
+		return () => {
+			window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+			if (iosTimeoutId) {
+				window.clearTimeout(iosTimeoutId);
+			}
+		};
+	}, [view]);
 
-  if (step === 'verify-otp') {
-    return (
-      <div className="min-h-screen cyber-bg text-white flex items-center justify-center relative overflow-hidden">
-        <CyberBackground />
-        <div className="animated-grid fixed inset-0 pointer-events-none opacity-20" style={{ zIndex: 0 }} />
-        
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="relative z-10"
-        >
-          <GlassCard className="max-w-md w-full mx-4" variant="strong" glow>
-            <h2 className="text-3xl font-bold mb-6 text-center">Verify Your Email</h2>
-            <p className="text-gray-400 mb-6 text-center">
-              Code sent to <span className="text-[#70ec9f] font-semibold">{email}</span>
-            </p>
-            {error && (
-              <motion.div 
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-4 p-3 glass-strong border-red-500 rounded-lg text-sm text-red-400"
-              >
-                {error}
-              </motion.div>
-            )}
-            <div className="space-y-4">
-              <CyberInput
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="000000"
-                label="Enter OTP"
-                maxLength={6}
-                disabled={loading}
-                className="text-center text-2xl tracking-widest"
-              />
-              <CyberButton
-                onClick={handleVerifyOtp}
-                disabled={loading || otp.length !== 6}
-                loading={loading}
-                className="w-full"
-              >
-                Verify
-              </CyberButton>
-            </div>
-          </GlassCard>
-        </motion.div>
-      </div>
-    );
-  }
+	const handlePwaInstall = async () => {
+		const isIOSDevice = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+		if (isIOSDevice || !deferredPrompt) {
+			return;
+		}
 
-  if (step === 'dashboard') {
-    return (
-      <div className="min-h-screen cyber-bg text-white relative overflow-hidden">
-        <CyberBackground />
-        <div className="animated-grid fixed inset-0 pointer-events-none opacity-20" style={{ zIndex: 0 }} />
-        
-        <nav className="border-b border-gray-800 bg-black/50 backdrop-blur-sm relative" style={{ zIndex: 10 }}>
-          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Shield className="w-8 h-8 text-[#70ec9f]" />
-              <span className="text-xl font-bold">Anonbank</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-400">{email}</span>
-              <WalletMultiButton />
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white rounded-lg transition text-sm border border-gray-800"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </nav>
+		deferredPrompt.prompt();
+		await deferredPrompt.userChoice;
+		setDeferredPrompt(null);
+		setShowPwaBanner(false);
+		if (typeof window !== 'undefined') {
+			window.localStorage.setItem('pwa-prompt-dismissed', 'true');
+		}
+	};
 
-        <div className="container mx-auto px-4 py-8 relative" style={{ zIndex: 10 }}>
-          <div className="max-w-4xl mx-auto mb-8">
-            <div className="glass-strong rounded-lg p-8">
-              <div className="mb-6">
-                <p className="text-gray-400 text-sm mb-2">Grid Account</p>
-                <h2 className="text-3xl font-bold">${balance.toFixed(2)}</h2>
-                <p className="text-gray-500 text-sm mt-2">{userState?.address?.slice(0, 8)}...</p>
-              </div>
-              <div className="bg-black rounded-lg p-4 border border-gray-800">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-400 text-sm">USDC Balance</span>
-                  <span className="text-white font-bold">${usdcBalance.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400 text-sm">Yield Earned</span>
-                  <span className="text-[#70ec9f] font-semibold">+${yieldEarned.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+	const handlePwaDismiss = () => {
+		if (typeof window !== 'undefined') {
+			window.localStorage.setItem('pwa-prompt-dismissed', 'true');
+		}
+		setShowPwaBanner(false);
+	};
 
-          {error && (
-            <div className="max-w-4xl mx-auto mb-6 p-4 bg-red-500/20 border border-red-500 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
+	const startAuthFlow = (mode: AuthMode) => {
+		setAuthMode(mode);
+		setAuthStep('email');
+		setError('');
+		setEmail('');
+		setOtp('');
+	};
 
-          <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
-            <div className="glass glow-border rounded-lg p-6">
-              <h3 className="text-xl font-bold mb-4 flex items-center space-x-2">
-                <TrendingUp className="w-6 h-6 text-[#70ec9f]" />
-                <span>Convert to Yield</span>
-              </h3>
-              <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                <p className="text-xs text-yellow-300 mb-1">⚠️ Mainnet Only Feature</p>
-                <p className="text-xs text-gray-400">
-                  USDC+ conversion requires mainnet-beta. Currently on devnet for testing.
-                </p>
-              </div>
-              <p className="text-sm text-gray-400 mb-4">
-                Convert USDC to USDC+ (yield-bearing) using your wallet
-              </p>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-400">Amount (USDC)</label>
-                  <input
-                    type="number"
-                    value={convertAmount}
-                    onChange={(e) => setConvertAmount(e.target.value)}
-                    className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:outline-none focus:border-[#70ec9f] text-white"
-                    placeholder="0.00"
-                    step="0.01"
-                    disabled={loading}
-                  />
-                </div>
-                <button
-                  onClick={handleConvertToYield}
-                  disabled={loading || !convertAmount || !connected}
-                  className="w-full bg-[#70ec9f] text-black py-3 rounded-lg font-semibold hover:bg-[#5dd889] transition disabled:opacity-50 flex items-center justify-center"
-                >
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 
-                   !connected ? 'Connect Wallet' : 'Convert to USDC+'}
-                </button>
-              </div>
-            </div>
+	const handleRequestOtp = async () => {
+		if (!email || !email.includes('@')) {
+			return;
+		}
 
-            <div className="glass glow-border rounded-lg p-6">
-              <h3 className="text-xl font-bold mb-4 flex items-center space-x-2">
-                <Send className="w-6 h-6 text-[#70ec9f]" />
-                <span>Send Money</span>
-              </h3>
-              <p className="text-sm text-gray-400 mb-4">
-                Send via Grid (uses your Grid session)
-              </p>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-400">Amount (USDC)</label>
-                  <input
-                    type="number"
-                    value={transferAmount}
-                    onChange={(e) => setTransferAmount(e.target.value)}
-                    className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:outline-none focus:border-[#70ec9f] text-white"
-                    placeholder="0.00"
-                    step="0.01"
-                    disabled={loading}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-400">Recipient</label>
-                  <input
-                    type="text"
-                    value={recipient}
-                    onChange={(e) => setRecipient(e.target.value)}
-                    className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:outline-none focus:border-[#70ec9f] text-white"
-                    placeholder="Address..."
-                    disabled={loading}
-                  />
-                </div>
-                <button
-                  onClick={handleTransfer}
-                  disabled={loading || !transferAmount || !recipient}
-                  className="w-full bg-[#70ec9f] text-black py-3 rounded-lg font-semibold hover:bg-[#5dd889] transition disabled:opacity-50 flex items-center justify-center"
-                >
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send'}
-                </button>
-              </div>
-            </div>
-          </div>
+		setLoading(true);
+		setError('');
 
-          <div className="max-w-4xl mx-auto mt-8 glass glow-border rounded-lg p-4">
-            <div className="flex items-start space-x-3">
-              <EyeOff className="w-5 h-5 text-[#70ec9f] mt-0.5" />
-              <div>
-                <p className="text-sm font-medium">Private Transfers Coming Soon</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Umbra integration will enable anonymous transfers via stealth addresses.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+		try {
+			const response = await fetch('/api/account', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					action: authMode === 'login' ? 'login' : 'create',
+					email,
+				}),
+			});
 
-  return null;
-}
+			if (!response.ok) {
+				throw new Error(authMode === 'login' ? 'Login failed' : 'Failed to create account');
+			}
+
+			const data = (await response.json()) as { user: unknown; sessionSecrets: unknown };
+			setUserData({
+				user: data.user,
+				sessionSecrets: data.sessionSecrets,
+				email,
+				isNewUser: authMode !== 'login',
+			});
+			setAuthStep('otp');
+		} catch (err) {
+			setError(err instanceof Error ? err.message : 'An error occurred');
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handleVerifyOtp = async () => {
+		if (!otp || otp.length !== 6 || !userData) {
+			return;
+		}
+
+		setLoading(true);
+		setError('');
+
+		try {
+			const response = await fetch('/api/account', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					action: 'verify',
+					otpCode: otp,
+					user: userData.user,
+					sessionSecrets: userData.sessionSecrets,
+					email: userData.email,
+					isNewUser: userData.isNewUser,
+				}),
+			});
+
+			if (!response.ok) {
+				throw new Error('OTP verification failed');
+			}
+
+			const result = (await response.json()) as UserState;
+			setUserState(result);
+			setUserData(null);
+			setOtp('');
+			setView('dashboard');
+			setAuthStep('welcome');
+
+			if (typeof window !== 'undefined') {
+				const session: StoredSession = {
+					userState: result,
+					email: userData.email,
+					timestamp: Date.now(),
+				};
+				window.localStorage.setItem('anonbank_session', JSON.stringify(session));
+			}
+
+			await loadBalances();
+		} catch (err) {
+			setError(err instanceof Error ? err.message : 'An error occurred');
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handleLogout = () => {
+		if (typeof window !== 'undefined') {
+			window.localStorage.removeItem('anonbank_session');
+		}
+
+		setUserState(null);
+		setUserData(null);
+		setEmail('');
+		setOtp('');
+		setBalance(0);
+		setUsdcBalance(0);
+		setYieldEarned(0);
+		setView('landing');
+		setAuthStep('welcome');
+		setAuthMode('signup');
+		setError('');
+	};
+
+	const handleTransfer = useCallback(
+		async (amount: string, destination: string): Promise<boolean> => {
+			const parsedAmount = parseFloat(amount);
+			if (!userState) {
+				setError('Complete email login to send funds.');
+				return false;
+			}
+			if (!destination || Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+				setError('Enter a valid recipient and amount.');
+				return false;
+			}
+
+			setLoading(true);
+			setError('');
+
+			try {
+				const response = await fetch('/api/account', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						action: 'transfer',
+						userState,
+						recipient: destination,
+						amount: parsedAmount * 1_000_000,
+						mint: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
+						usePrivacy: false,
+					}),
+				});
+
+				if (!response.ok) {
+					throw new Error('Transfer failed');
+				}
+
+				const result = await response.json();
+				if (result.signature) {
+					window.alert(`Transfer successful! Signature: ${result.signature}`);
+					await loadBalances();
+					setError('');
+					return true;
+				}
+
+				throw new Error(result.error || 'Transfer failed');
+			} catch (err) {
+				setError(err instanceof Error ? err.message : 'Transfer failed');
+				return false;
+			} finally {
+				setLoading(false);
+			}
+		},
+		[loadBalances, userState],
+	);
+
+	const handleConvertToYield = useCallback(
+		async (amount: string): Promise<boolean> => {
+			const parsedAmount = parseFloat(amount);
+			if (!publicKey || !signTransaction) {
+				setError('Connect wallet to convert to yield-bearing stablecoin.');
+				return false;
+			}
+			if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+				setError('Enter a valid amount to convert.');
+				return false;
+			}
+
+			setLoading(true);
+			setError('');
+
+			try {
+				const response = await fetch('/api/account', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						action: 'convert',
+						publicKey: publicKey.toString(),
+						amount: parsedAmount,
+					}),
+				});
+
+				if (!response.ok) {
+					throw new Error('Failed to create conversion transaction');
+				}
+
+				const { transaction: serializedTx } = await response.json();
+				const transaction = VersionedTransaction.deserialize(Buffer.from(serializedTx, 'base64'));
+				const signed = await signTransaction(transaction);
+
+				const submitResponse = await fetch('/api/account', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						action: 'submit',
+						signedTransaction: Buffer.from(signed.serialize()).toString('base64'),
+					}),
+				});
+
+				if (!submitResponse.ok) {
+					throw new Error('Failed to submit transaction');
+				}
+
+				const submitResult = await submitResponse.json();
+				if (submitResult.signature) {
+					window.alert(`Successfully converted to USDC+! Signature: ${submitResult.signature}`);
+					await loadBalances();
+					setError('');
+					return true;
+				}
+
+				throw new Error(submitResult.error || 'Conversion failed');
+			} catch (err) {
+				setError(err instanceof Error ? err.message : 'Conversion failed');
+				return false;
+			} finally {
+				setLoading(false);
+			}
+		},
+		[loadBalances, publicKey, signTransaction],
+	);
+
+	const currentWalletAddress = userState?.address ?? publicKey?.toString() ?? null;
+	const totalBalance = balance + usdcBalance;
+	const isIOSDevice = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+	const currentTime = new Date().toLocaleTimeString();
+
+	if (view === 'dashboard') {
+		return (
+			<div className="relative min-h-screen overflow-hidden bg-black text-white">
+				<VideoBackground />
+				<div className="relative z-10">
+					<Dashboard
+						onBack={handleLogout}
+						walletAddress={currentWalletAddress}
+						totalBalance={totalBalance}
+						usdcBalance={usdcBalance}
+						yieldEarned={yieldEarned}
+						onSend={handleTransfer}
+						onConvert={handleConvertToYield}
+						onRefreshBalances={loadBalances}
+						loading={loading}
+						error={error}
+						walletButton={<WalletMultiButton />}
+						connected={connected}
+					/>
+				</div>
+			</div>
+		);
+	}
+
+	if (view === 'auth') {
+		return (
+			<div className="relative min-h-screen overflow-hidden bg-black text-white">
+				<VideoBackground />
+
+				<div className="corner-bracket corner-tl" />
+				<div className="corner-bracket corner-tr" />
+				<div className="corner-bracket corner-bl" />
+				<div className="corner-bracket corner-br" />
+
+				<div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-3 py-3 font-mono text-[0.6rem] uppercase tracking-widest text-white/60 sm:px-6 sm:py-4 sm:text-xs md:text-sm">
+					<div className="flex items-center gap-2 sm:gap-4 md:gap-8">
+						<span className="font-bold text-white">&gt; SURVEILLANCE_OFF</span>
+						<span className="hidden text-white/40 sm:inline">|</span>
+						<span className="hidden font-bold text-white md:inline">&gt; ENCRYPTED</span>
+						<span className="hidden text-white/40 md:inline">|</span>
+						<span className="hidden font-bold text-white md:inline">&gt; ANONYMOUS</span>
+					</div>
+					<div className="flex items-center gap-2">
+						<div className="h-2 w-2 animate-pulse rounded-full bg-white" />
+						<span className="font-bold text-white">LIVE</span>
+					</div>
+				</div>
+
+				<div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 py-20">
+					<div className="w-full max-w-md space-y-8">
+						{authStep === 'welcome' && (
+							<div className="space-y-8 text-center animate-fade-in">
+								<div className="space-y-2">
+									<h1
+										className="brutal-glitch text-white"
+										style={{ fontFamily: 'Anton, sans-serif', fontSize: 'clamp(4rem, 15vw, 8rem)', lineHeight: '0.9' }}
+									>
+										NOMA
+									</h1>
+									<p
+										className="text-white/90 font-mono font-bold tracking-[0.3em] uppercase"
+										style={{ fontSize: 'clamp(0.75rem, 3vw, 1.5rem)' }}
+									>
+										CASH
+									</p>
+								</div>
+
+								<div className="mt-12 space-y-4">
+									<button
+										onClick={() => startAuthFlow('signup')}
+										className="w-full border-4 border-white/30 bg-red-600 px-4 py-4 text-lg font-black uppercase tracking-wider text-white transition-colors hover:bg-red-700"
+										style={{ fontFamily: 'Anton, sans-serif' }}
+									>
+										SIGN UP
+									</button>
+									<button
+										onClick={() => startAuthFlow('login')}
+										className="w-full border-4 border-white/30 bg-white/10 px-4 py-4 text-lg font-black uppercase tracking-wider text-white transition-colors hover:bg-white/20"
+										style={{ fontFamily: 'Anton, sans-serif' }}
+									>
+										LOGIN
+									</button>
+								</div>
+
+								<button
+									onClick={() => setView('landing')}
+									className="mx-auto mt-8 flex items-center justify-center gap-2 font-mono text-xs uppercase tracking-wider text-white/60 transition-colors hover:text-white"
+								>
+									<ArrowLeft className="h-4 w-4" /> BACK TO HOME
+								</button>
+							</div>
+						)}
+
+						{authStep === 'email' && (
+							<div className="space-y-6 animate-fade-in">
+								<div className="space-y-2 text-center">
+									<h2
+										className="text-white brutal-glitch"
+										style={{ fontFamily: 'Anton, sans-serif', fontSize: 'clamp(2rem, 8vw, 3rem)' }}
+									>
+										{authMode === 'signup' ? 'CREATE ACCOUNT' : 'LOGIN'}
+									</h2>
+									<p className="font-mono text-xs uppercase tracking-wider text-white/60">ENTER YOUR EMAIL</p>
+								</div>
+
+								{error && (
+									<div className="rounded-none border border-red-600 bg-red-500/10 p-3 text-center font-mono text-xs uppercase tracking-wider text-red-400">
+										{error}
+									</div>
+								)}
+
+								<input
+									type="email"
+									placeholder="your@email.com"
+									value={email}
+									onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)}
+									onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
+										if (event.key === 'Enter') {
+											event.preventDefault();
+											handleRequestOtp();
+										}
+									}}
+									disabled={loading}
+									className="w-full border-4 border-white/30 bg-black px-4 py-6 font-mono text-lg text-white placeholder:text-white/40 focus:border-red-600"
+								/>
+
+								<button
+									onClick={handleRequestOtp}
+									disabled={loading || !email || !email.includes('@')}
+									className="w-full border-4 border-white/30 bg-red-600 px-4 py-4 text-lg font-black uppercase tracking-wider text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-white/10"
+									style={{ fontFamily: 'Anton, sans-serif' }}
+								>
+									{authMode === 'signup' ? 'CREATE ACCOUNT' : 'LOGIN TO ACCOUNT'}
+								</button>
+
+								<button
+									onClick={() => setAuthStep('welcome')}
+									className="flex w-full items-center justify-center gap-2 font-mono text-xs uppercase tracking-wider text-white/60 transition-colors hover:text-white"
+								>
+									<ArrowLeft className="h-4 w-4" /> BACK
+								</button>
+							</div>
+						)}
+
+						{authStep === 'otp' && (
+							<div className="space-y-6 animate-fade-in">
+								<div className="space-y-2 text-center">
+									<h2
+										className="text-white brutal-glitch"
+										style={{ fontFamily: 'Anton, sans-serif', fontSize: 'clamp(2rem, 8vw, 3rem)' }}
+									>
+										VERIFY EMAIL
+									</h2>
+									<p className="font-mono text-xs uppercase tracking-wider text-white/60">CODE SENT TO</p>
+									<p className="font-mono text-sm text-red-500">{email}</p>
+								</div>
+
+								{error && (
+									<div className="rounded-none border border-red-600 bg-red-500/10 p-3 text-center font-mono text-xs uppercase tracking-wider text-red-400">
+										{error}
+									</div>
+								)}
+
+								<div className="flex justify-center">
+									<InputOTP
+										maxLength={6}
+										value={otp}
+										onChange={(value: string) => setOtp(value.replace(/\D/g, '').slice(0, 6))}
+										onComplete={handleVerifyOtp}
+									>
+										<InputOTPGroup className="gap-2">
+											{Array.from({ length: 6 }).map((_, index) => (
+												<InputOTPSlot
+													key={`otp-slot-${index}`}
+													index={index}
+													className="h-16 w-14 border-2 border-white/30 bg-black text-2xl font-mono text-white focus:border-red-600"
+												/>
+											))}
+										</InputOTPGroup>
+									</InputOTP>
+								</div>
+
+								<button
+									onClick={handleVerifyOtp}
+									disabled={loading || otp.length !== 6}
+									className="w-full border-4 border-white/30 bg-red-600 px-4 py-4 text-lg font-black uppercase tracking-wider text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-white/10"
+									style={{ fontFamily: 'Anton, sans-serif' }}
+								>
+									VERIFY
+								</button>
+
+								<button
+									onClick={() => {
+										setAuthStep('email');
+										setOtp('');
+										setError('');
+									}}
+									className="flex w-full items-center justify-center gap-2 font-mono text-xs uppercase tracking-wider text-white/60 transition-colors hover:text-white"
+								>
+									<ArrowLeft className="h-4 w-4" /> BACK TO EMAIL
+								</button>
+							</div>
+						)}
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className="relative min-h-screen overflow-hidden bg-black text-white">
+			<VideoBackground />
+
+			<div className="fixed top-0 left-0 right-0 z-50">
+				<div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-3 font-mono text-[0.6rem] uppercase tracking-widest text-white/60 sm:px-6 sm:py-4 sm:text-xs">
+					<div className="flex items-center gap-3 sm:gap-6 md:gap-8">
+						<span className="hidden font-bold text-white sm:inline">&gt; SURVEILLANCE_OFF</span>
+						<span className="hidden text-white/40 sm:inline">|</span>
+						<span className="hidden font-bold text-white md:inline">&gt; ENCRYPTED</span>
+						<span className="hidden text-white/40 md:inline">|</span>
+						<span className="hidden font-bold text-white md:inline">&gt; ANONYMOUS</span>
+					</div>
+					<div className="flex items-center gap-2">
+						<div className="h-2 w-2 animate-pulse rounded-full bg-white" />
+						<span className="font-bold text-white">LIVE</span>
+					</div>
+				</div>
+			</div>
+
+			<div className="relative z-10 flex h-screen flex-col items-center justify-center overflow-hidden p-8">
+				<div className="mb-4 mt-8 px-4 text-center">
+					<div className="word text-sm font-bold uppercase tracking-[0.2em] text-white/60 sm:text-sm md:text-base" data-delay="0">
+						Keep What&#39;s Yours
+					</div>
+				</div>
+
+				<div className="mx-auto mb-6 max-w-7xl px-4 text-center">
+					<div className="mb-6">
+						<h1 className="brutal-glitch word mb-2 block text-7xl font-black leading-none tracking-tighter text-white sm:text-7xl md:text-8xl lg:text-9xl xl:text-[12rem]" data-delay="300">
+							NOMA
+						</h1>
+						<div className="word inline-block font-mono text-2xl font-bold tracking-[0.3em] text-white/90 sm:text-2xl md:text-3xl lg:text-4xl" data-delay="500">
+							CASH
+						</div>
+					</div>
+
+					<div className="mb-4 text-2xl font-black leading-none tracking-tight text-white sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl">
+						<div className="mb-1">
+							<span className="word brutal-word" data-delay="700">
+								PRIVACY.
+							</span>
+						</div>
+						<div className="mb-1">
+							<span className="word brutal-word text-red-600" data-delay="900">
+								FUCK
+							</span>{' '}
+							<span className="word brutal-word text-red-600" data-delay="1050">
+								THE
+							</span>{' '}
+							<span className="word brutal-word text-red-600" data-delay="1200">
+								REST
+							</span>
+						</div>
+					</div>
+
+					<div className="mb-4 space-y-1 text-sm font-black uppercase tracking-wider text-white/90 sm:text-base md:text-lg lg:text-xl">
+						<div>
+							<span className="word brutal-statement" data-delay="1500">
+								FUCK
+							</span>{' '}
+							<span className="word brutal-statement" data-delay="1650">
+								CENSORSHIP
+							</span>
+						</div>
+						<div>
+							<span className="word brutal-statement" data-delay="1800">
+								FUCK
+							</span>{' '}
+							<span className="word brutal-statement" data-delay="1950">
+								REGIMES
+							</span>
+						</div>
+					</div>
+				</div>
+
+				<div className="fade-in-stats mb-6 flex items-center justify-center gap-4 px-4 sm:gap-6 md:gap-8 lg:gap-16">
+					<div className="grunge-stat text-center">
+						<div className="grunge-flicker mb-1 font-mono text-[0.6rem] uppercase tracking-[0.2em] text-white/60 sm:text-xs md:text-sm">APY</div>
+						<div className="grunge-text text-2xl font-black text-white sm:text-3xl md:text-4xl lg:text-5xl" data-text="UP TO 20%">
+							UP TO 20%
+						</div>
+					</div>
+					<div className="grunge-stat text-center">
+						<div className="grunge-flicker mb-1 font-mono text-[0.6rem] uppercase tracking-[0.2em] text-white/60 sm:text-xs md:text-sm">SECURE</div>
+						<div className="grunge-text text-2xl font-black text-white sm:text-3xl md:text-4xl lg:text-5xl" data-text="TRANSFERS">
+							TRANSFERS
+						</div>
+					</div>
+					<div className="grunge-stat text-center">
+						<div className="grunge-flicker mb-1 font-mono text-[0.6rem] uppercase tracking-[0.2em] text-white/60 sm:text-xs md:text-sm">PRIVACY</div>
+						<div className="grunge-text text-2xl font-black text-white sm:text-3xl md:text-4xl lg:text-5xl" data-text="FULL">
+							FULL
+						</div>
+					</div>
+				</div>
+
+				<div className="fade-in-cta mb-6 flex flex-col gap-3 px-4 sm:flex-row sm:gap-4">
+					<button
+						onClick={() => {
+							setView('auth');
+							setAuthStep('welcome');
+							setError('');
+						}}
+						className="brutal-btn-primary px-8 py-3 text-sm font-black uppercase tracking-[0.2em] sm:px-8 sm:py-3 sm:text-sm md:text-base"
+					>
+						&gt; ENTER APP
+					</button>
+					<button
+						onClick={() => setManifestoOpen(true)}
+						className="brutal-btn-ghost px-8 py-3 text-sm font-black uppercase tracking-[0.2em] sm:px-8 sm:py-3 sm:text-sm md:text-base"
+					>
+						&gt; MANIFESTO
+					</button>
+				</div>
+
+				<div className="px-4 text-center">
+					<div className="brutal-bottom word text-xs font-black uppercase tracking-[0.3em] text-white/70 sm:text-sm md:text-base" data-delay="2200">
+						THEY CAN&#39;T STOP US
+					</div>
+				</div>
+
+				{glitchTexts.map((item) => (
+					<div
+						key={item.id}
+						className="glitch-text-random fixed"
+						style={{ left: `${item.x}%`, top: `${item.y}%`, fontSize: `${item.size}rem` }}
+					>
+						{item.text}
+					</div>
+				))}
+
+				<div className="hidden space-y-2 font-mono text-xs uppercase tracking-widest text-white/70 md:fixed md:bottom-12 md:left-12 md:block">
+					<div className="flex items-center gap-2 font-black">
+						<Heart className="h-4 w-4" /> SOL POWERED
+					</div>
+					<div className="flex items-center gap-2 font-black">
+						<Zap className="h-4 w-4" /> FAST AS HELL
+					</div>
+					<div className="flex items-center gap-2 font-black">
+						<Flame className="h-4 w-4" /> UNSTOPPABLE
+					</div>
+				</div>
+
+				<div className="hidden font-mono text-xs text-white/50 md:fixed md:right-12 md:top-24">
+					<div>REC ●</div>
+					<div>{currentTime}</div>
+				</div>
+			</div>
+
+			<Dialog open={manifestoOpen} onOpenChange={setManifestoOpen}>
+				<DialogContent className="w-[95vw] max-w-6xl border-4 border-white/30 bg-black p-4 sm:p-6">
+					<DialogTitle className="sr-only">NOMA Manifesto</DialogTitle>
+					<DialogDescription className="sr-only">Watch the NOMA manifesto</DialogDescription>
+
+					<DialogClose className="absolute right-2 top-2 flex items-center justify-center border border-white/30 bg-black/80 p-2 text-white/70 transition-colors hover:text-white">
+						<X className="h-5 w-5" />
+					</DialogClose>
+
+					<div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+						<iframe
+							className="absolute left-0 top-0 h-full w-full border-2 border-white/20"
+							src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0"
+							title="NOMA MANIFESTO"
+							allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+							allowFullScreen
+						/>
+					</div>
+				</DialogContent>
+			</Dialog>
+
+			{showPwaBanner && (
+				<div className="fixed top-0 left-0 right-0 z-[100] animate-slide-down">
+					<div className="border-b-4 border-white/30 bg-black shadow-2xl">
+						<div className="mx-auto max-w-4xl px-3 py-3 sm:px-4 sm:py-4">
+							{isIOSDevice ? (
+								<div className="space-y-3">
+									<div className="flex items-center justify-between gap-4">
+										<div className="flex flex-1 items-center gap-3">
+											<div className="border-2 border-white/30 bg-red-600 p-2">
+												<Smartphone className="h-5 w-5 text-white" />
+											</div>
+											<div className="min-w-0 flex-1">
+												<h3
+													className="mb-0.5 uppercase tracking-wider text-white"
+													style={{ fontFamily: 'Anton, sans-serif' }}
+												>
+													&gt; ADD TO HOME
+												</h3>
+												<p className="font-mono text-[10px] uppercase tracking-wider text-white/60">
+													INSTANT ACCESS • ZERO TRACE
+												</p>
+											</div>
+										</div>
+										<button
+											onClick={handlePwaDismiss}
+											className="border-2 border-white/30 bg-black/80 p-2 text-white/70 transition-colors hover:text-white"
+										>
+											<X className="h-4 w-4" />
+										</button>
+									</div>
+
+									<div className="space-y-2 border-2 border-white/20 bg-white/5 p-3">
+										<div className="flex items-start gap-2">
+											<Share2 className="mt-0.5 h-4 w-4 text-red-500" />
+											<p className="font-mono text-[10px] text-white/80">
+												Tap <span className="font-bold text-red-500">SHARE</span> button in Safari
+											</p>
+										</div>
+										<div className="flex items-start gap-2">
+											<Smartphone className="mt-0.5 h-4 w-4 text-red-500" />
+											<p className="font-mono text-[10px] text-white/80">
+												Select <span className="font-bold text-red-500">&quot;Add to Home Screen&quot;</span>
+											</p>
+										</div>
+									</div>
+								</div>
+							) : (
+								<div className="flex items-center justify-between gap-4">
+									<div className="flex flex-1 items-center gap-3 sm:gap-4">
+										<div className="border-2 border-white/30 bg-red-600 p-2">
+											<Smartphone className="h-5 w-5 text-white" />
+										</div>
+										<div className="min-w-0 flex-1">
+											<h3
+												className="mb-0.5 uppercase tracking-wider text-white"
+												style={{ fontFamily: 'Anton, sans-serif' }}
+											>
+												&gt; ADD TO HOME SCREEN
+											</h3>
+											<p className="font-mono text-[10px] uppercase tracking-wider text-white/60">
+												INSTANT ACCESS • ZERO TRACE
+											</p>
+										</div>
+									</div>
+
+									<div className="flex items-center gap-2">
+										<button
+											onClick={handlePwaInstall}
+											className="border-2 border-white/30 bg-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white transition-colors hover:bg-red-700 sm:px-4 sm:text-xs"
+										>
+											&gt; INSTALL
+										</button>
+										<button
+											onClick={handlePwaDismiss}
+											className="border-2 border-white/30 bg-black/80 p-2 text-white/70 transition-colors hover:text-white"
+										>
+											<X className="h-4 w-4" />
+										</button>
+									</div>
+								</div>
+							)}
+						</div>
+						<div className="h-1 bg-gradient-to-r from-transparent via-red-600/50 to-transparent opacity-50" />
+					</div>
+				</div>
+			)}
+		</div>
+		);
+	}

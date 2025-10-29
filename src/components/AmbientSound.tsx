@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface AmbientSoundProps {
   volume?: number;
@@ -9,110 +9,144 @@ interface AmbientSoundProps {
   playbackRate?: number;
 }
 
-export default function AmbientSound({ 
-  volume = 0.15, 
+const STORAGE_KEY = 'ambient-sound-muted-v2';
+const AMBIENT_EVENT = 'ambient-sound:mute';
+
+export default function AmbientSound({
+  volume = 0.15,
   fadeInDuration = 3000,
   fadeOutDuration = 2000,
-  playbackRate = 1.0 
+  playbackRate = 1.0,
 }: AmbientSoundProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const fadeFrameRef = useRef<number | null>(null);
+  const interactionHandlerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    // Create audio element
+    if (typeof window === 'undefined') return undefined;
+
     const audio = new Audio('/sounds/drone.mp3');
     audio.loop = true;
-    audio.volume = 0; // Start at 0 for fade in
-    audio.playbackRate = playbackRate; // Playback speed (1.0 is normal speed)
+    audio.volume = 0;
+    audio.playbackRate = playbackRate;
+    audio.preload = 'auto';
     audioRef.current = audio;
 
-    // Function to fade in
-    const fadeIn = () => {
-      if (!audioRef.current) return;
-      
-      const startTime = Date.now();
-      const startVolume = 0;
-      const targetVolume = volume;
+    const cancelFade = () => {
+      if (fadeFrameRef.current !== null) {
+        cancelAnimationFrame(fadeFrameRef.current);
+        fadeFrameRef.current = null;
+      }
+    };
 
-      const fade = () => {
+    const fadeTo = (targetVolume: number, duration: number, onComplete?: () => void) => {
+      if (!audioRef.current) return;
+      cancelFade();
+
+      const startVolume = audioRef.current.volume;
+      const startTime = performance.now();
+
+      const step = (now: number) => {
         if (!audioRef.current) return;
-        
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / fadeInDuration, 1);
-        
-        // Smooth easing function
-        const eased = progress * progress * (3 - 2 * progress); // Smoothstep
+
+        const elapsed = now - startTime;
+        const progress = duration === 0 ? 1 : Math.min(elapsed / duration, 1);
+        const eased = progress * progress * (3 - 2 * progress);
         audioRef.current.volume = startVolume + (targetVolume - startVolume) * eased;
 
         if (progress < 1) {
-          requestAnimationFrame(fade);
+          fadeFrameRef.current = requestAnimationFrame(step);
+        } else {
+          fadeFrameRef.current = null;
+          onComplete?.();
         }
       };
 
-      fade();
+      fadeFrameRef.current = requestAnimationFrame(step);
     };
 
-    // Try to play (may fail due to browser autoplay policy)
-    const playAudio = async () => {
-      try {
-        await audio.play();
-        setIsPlaying(true);
-        fadeIn();
-      } catch {
-        console.log('Autoplay prevented, will start on user interaction');
-        
-        // Set up one-time event listener for user interaction
-        const startOnInteraction = () => {
-          audio.play().then(() => {
-            setIsPlaying(true);
-            fadeIn();
-          }).catch(err => console.log('Failed to play:', err));
-          
-          // Remove listeners after first interaction
-          document.removeEventListener('click', startOnInteraction);
-          document.removeEventListener('keydown', startOnInteraction);
-        };
+    const clearInteractionHandlers = () => {
+      if (!interactionHandlerRef.current) return;
+      document.removeEventListener('pointerdown', interactionHandlerRef.current);
+      document.removeEventListener('keydown', interactionHandlerRef.current);
+      interactionHandlerRef.current = null;
+    };
 
-        document.addEventListener('click', startOnInteraction, { once: true });
-        document.addEventListener('keydown', startOnInteraction, { once: true });
+    const scheduleInteractionStart = () => {
+      if (interactionHandlerRef.current) return;
+
+      const handler = () => {
+        interactionHandlerRef.current = null;
+        void startPlayback(true);
+      };
+
+      interactionHandlerRef.current = handler;
+      document.addEventListener('pointerdown', handler, { once: true });
+      document.addEventListener('keydown', handler, { once: true });
+    };
+
+    const startPlayback = async (triggeredByUser = false) => {
+      if (!audioRef.current) return;
+
+      clearInteractionHandlers();
+      audioRef.current.muted = false;
+      audioRef.current.volume = Math.min(audioRef.current.volume, volume);
+
+      try {
+        await audioRef.current.play();
+        fadeTo(volume, fadeInDuration);
+      } catch (error) {
+        if (!triggeredByUser) {
+          scheduleInteractionStart();
+        } else {
+          console.log('Failed to play ambient sound:', error);
+        }
       }
     };
 
-    playAudio();
+    const stopPlayback = () => {
+      if (!audioRef.current) return;
 
-    // Cleanup function with fade out
+      clearInteractionHandlers();
+      fadeTo(0, fadeOutDuration, () => {
+        audioRef.current?.pause();
+      });
+    };
+
+    const handleMuteChange = (event: Event) => {
+      if (!audioRef.current) return;
+
+      const muted = (event as CustomEvent<{ muted: boolean }>).detail.muted;
+      audioRef.current.muted = muted;
+
+      if (muted) {
+        stopPlayback();
+      } else {
+        void startPlayback(true);
+      }
+    };
+
+    const initialMute = window.localStorage.getItem(STORAGE_KEY) === 'true';
+    audio.muted = initialMute;
+
+    if (!initialMute) {
+      void startPlayback();
+    }
+
+    window.addEventListener(AMBIENT_EVENT, handleMuteChange as EventListener);
+
     return () => {
-      if (audioRef.current && isPlaying) {
-        const audio = audioRef.current;
-        const startTime = Date.now();
-        const startVolume = audio.volume;
+      window.removeEventListener(AMBIENT_EVENT, handleMuteChange as EventListener);
+      cancelFade();
+      clearInteractionHandlers();
 
-        const fadeOut = () => {
-          if (!audio) return;
-          
-          const elapsed = Date.now() - startTime;
-          const progress = Math.min(elapsed / fadeOutDuration, 1);
-          
-          // Smooth easing function
-          const eased = progress * progress * (3 - 2 * progress);
-          audio.volume = startVolume * (1 - eased);
-
-          if (progress < 1) {
-            requestAnimationFrame(fadeOut);
-          } else {
-            audio.pause();
-            audio.remove();
-          }
-        };
-
-        fadeOut();
-      } else if (audioRef.current) {
+      if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.remove();
+        audioRef.current = null;
       }
     };
-  }, [volume, fadeInDuration, fadeOutDuration, playbackRate, isPlaying]);
+  }, [fadeInDuration, fadeOutDuration, playbackRate, volume]);
 
-  // This component doesn't render anything visible
   return null;
 }
