@@ -320,6 +320,45 @@ export default function Home() {
 		[loadBalances, publicKey, signTransaction],
 	);
 
+	const handleSwap = useCallback(
+		async (amount: string, fromCurrency: string, toCurrency: string): Promise<boolean> => {
+			const parsedAmount = parseFloat(amount);
+			if (!publicKey || !signTransaction) {
+				setError('Connect wallet to swap tokens.');
+				return false;
+			}
+			if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+				setError('Enter a valid amount to swap.');
+				return false;
+			}
+			if (fromCurrency === toCurrency) {
+				setError('Select different tokens to swap.');
+				return false;
+			}
+
+			setLoading(true);
+			setError('');
+
+			try {
+				// For now, just show an alert since this is demo functionality
+				// In a real app, you would integrate with Jupiter or another DEX
+				window.alert(`Swap functionality coming soon!\nSwap ${parsedAmount} ${fromCurrency} → ${toCurrency}`);
+				
+				// Simulate success
+				await new Promise(resolve => setTimeout(resolve, 1000));
+				await loadBalances();
+				setError('');
+				return true;
+			} catch (err) {
+				setError(err instanceof Error ? err.message : 'Swap failed');
+				return false;
+			} finally {
+				setLoading(false);
+			}
+		},
+		[loadBalances, publicKey, signTransaction],
+	);
+
 	const currentWalletAddress = publicKey?.toString() ?? null;
 	const totalBalance = balance + usdcBalance;
 	const isIOSDevice = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -337,6 +376,7 @@ export default function Home() {
 						yieldEarned={yieldEarned}
 						onSend={handleTransfer}
 						onConvert={handleConvertToYield}
+						onSwap={handleSwap}
 						onRefreshBalances={loadBalances}
 						loading={loading}
 						error={error}

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import {
+  ArrowDownUp,
   ArrowLeft,
   Check,
   Copy,
@@ -13,6 +14,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface DashboardProps {
   onBack: () => void;
@@ -22,6 +24,7 @@ interface DashboardProps {
   yieldEarned: number;
   onSend: (amount: string, recipient: string) => Promise<boolean>;
   onConvert: (amount: string) => Promise<boolean>;
+  onSwap: (amount: string, fromCurrency: string, toCurrency: string) => Promise<boolean>;
   onRefreshBalances: () => Promise<void>;
   loading: boolean;
   error?: string;
@@ -37,6 +40,7 @@ export default function Dashboard({
   yieldEarned,
   onSend,
   onConvert,
+  onSwap,
   onRefreshBalances,
   loading,
   error,
@@ -48,6 +52,11 @@ export default function Dashboard({
   const [recipient, setRecipient] = useState("");
   const [convertAmount, setConvertAmount] = useState("");
   const [copied, setCopied] = useState(false);
+
+  // Swap states
+  const [swapAmount, setSwapAmount] = useState("");
+  const [fromCurrency, setFromCurrency] = useState("USDC");
+  const [toCurrency, setToCurrency] = useState("SOL");
 
   useEffect(() => {
     const words = document.querySelectorAll(".word");
@@ -113,6 +122,16 @@ export default function Dashboard({
     const success = await onConvert(convertAmount);
     if (success) {
       setConvertAmount("");
+    }
+  };
+
+  const handleSwap = async () => {
+    if (!swapAmount || fromCurrency === toCurrency) {
+      return;
+    }
+    const success = await onSwap(swapAmount, fromCurrency, toCurrency);
+    if (success) {
+      setSwapAmount("");
     }
   };
 
@@ -205,7 +224,7 @@ export default function Dashboard({
                 <div className="mb-1 font-mono text-xs uppercase tracking-wider text-white/40">
                   Yield Earned
                 </div>
-                <div className="text-xl font-black text-green-500 sm:text-2xl">
+                <div className="text-xl font-black text-white/70 sm:text-2xl">
                   {balanceVisible ? `+$${yieldEarned.toFixed(2)}` : "••••"}
                 </div>
               </div>
@@ -232,12 +251,12 @@ export default function Dashboard({
               <span className="sm:hidden">Receive</span>
             </TabsTrigger>
             <TabsTrigger
-              value="yield"
+              value="swap"
               className="rounded-none py-3 text-[0.6rem] font-black uppercase tracking-wider text-white/60 transition data-[state=active]:border-2 data-[state=active]:border-white data-[state=active]:bg-white data-[state=active]:text-black sm:py-4 sm:text-xs md:text-sm"
             >
-              <TrendingUp className="mr-1 h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Convert to Yield</span>
-              <span className="sm:hidden">Convert</span>
+              <ArrowDownUp className="mr-1 h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Swap</span>
+              <span className="sm:hidden">Swap</span>
             </TabsTrigger>
           </TabsList>
 
@@ -258,7 +277,7 @@ export default function Dashboard({
                     value={sendAmount}
                     onChange={(e) => setSendAmount(e.target.value)}
                     placeholder="0.00"
-                    className="w-full rounded-none border-2 border-white/20 bg-black/60 px-4 py-3 font-mono text-base text-white transition-colors outline-none focus:border-green-500 sm:py-4 sm:text-lg"
+                    className="w-full rounded-none border-2 border-white/20 bg-black/60 px-4 py-3 font-mono text-base text-white transition-colors outline-none focus:border-white/60 sm:py-4 sm:text-lg"
                     disabled={loading}
                   />
                 </div>
@@ -272,7 +291,7 @@ export default function Dashboard({
                     value={recipient}
                     onChange={(e) => setRecipient(e.target.value)}
                     placeholder="Address..."
-                    className="w-full rounded-none border-2 border-white/20 bg-black/60 px-4 py-3 font-mono text-sm text-white transition-colors outline-none focus:border-green-500 sm:py-4 sm:text-base"
+                    className="w-full rounded-none border-2 border-white/20 bg-black/60 px-4 py-3 font-mono text-sm text-white transition-colors outline-none focus:border-white/60 sm:py-4 sm:text-base"
                     disabled={loading}
                   />
                 </div>
@@ -356,7 +375,7 @@ export default function Dashboard({
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white/60 transition-colors hover:text-white"
                     disabled={!currentAddress}
                   >
-                    {copied ? <Check className="h-5 w-5 text-green-500" /> : <Copy className="h-5 w-5" />}
+                    {copied ? <Check className="h-5 w-5 text-white" /> : <Copy className="h-5 w-5" />}
                   </button>
                 </div>
               </div>
@@ -391,48 +410,108 @@ export default function Dashboard({
             </div>
           </TabsContent>
 
-          <TabsContent value="yield" className="mt-0">
+          <TabsContent value="swap" className="mt-0">
             <div className="grunge-box space-y-6 border-2 border-white/20 p-6 sm:p-8">
               <div className="font-mono text-xs uppercase tracking-wider text-white/50 sm:text-sm">
-                Convert USDC to yield-bearing position (USDC+)
+                SWAP TOKENS INSTANTLY
               </div>
 
               <div className="space-y-4">
+                {/* From Currency */}
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-wider text-white sm:text-sm">
-                    Amount (USDC)
+                    From
+                  </label>
+                  <Select value={fromCurrency} onValueChange={setFromCurrency}>
+                    <SelectTrigger className="h-auto w-full rounded-none border-2 border-white/20 bg-black/60 px-4 py-3 font-mono text-sm text-white transition-colors focus:border-white/60 focus:outline-none sm:py-4 sm:text-base">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-none border-2 border-white/20 bg-black font-mono text-white">
+                      <SelectItem value="SOL" className="text-white hover:bg-white/10 focus:bg-white/10">SOL</SelectItem>
+                      <SelectItem value="USDC" className="text-white hover:bg-white/10 focus:bg-white/10">USDC</SelectItem>
+                      <SelectItem value="USDT" className="text-white hover:bg-white/10 focus:bg-white/10">USDT</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Amount */}
+                <div>
+                  <label className="mb-2 block text-xs font-black uppercase tracking-wider text-white sm:text-sm">
+                    Amount ({fromCurrency})
                   </label>
                   <input
                     type="number"
                     step="0.01"
-                    value={convertAmount}
-                    onChange={(e) => setConvertAmount(e.target.value)}
+                    value={swapAmount}
+                    onChange={(e) => setSwapAmount(e.target.value)}
                     placeholder="0.00"
-                    className="w-full rounded-none border-2 border-white/20 bg-black/60 px-4 py-3 font-mono text-base text-white transition-colors outline-none focus:border-green-500 sm:py-4 sm:text-lg"
-                    disabled={loading}
+                    className="w-full rounded-none border-2 border-white/20 bg-black/60 px-4 py-3 font-mono text-base text-white transition-colors focus:border-white/60 focus:outline-none sm:py-4 sm:text-lg"
                   />
                 </div>
 
-                <div className="border border-green-500/30 bg-green-500/10 p-4 font-mono text-xs text-green-400 sm:text-sm">
-                  <div className="mb-1 flex justify-between">
-                    <span className="text-white/60">Estimated APY:</span>
-                    <span className="font-black">20%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-white/60">Annual earnings:</span>
-                    <span className="font-black">
-                      ${convertAmount ? (parseFloat(convertAmount || "0") * 0.2).toFixed(2) : "0.00"}
-                    </span>
-                  </div>
+                {/* Swap Direction Indicator */}
+                <div className="flex justify-center py-2">
+                  <button
+                    onClick={() => {
+                      const temp = fromCurrency;
+                      setFromCurrency(toCurrency);
+                      setToCurrency(temp);
+                    }}
+                    className="rounded-none border-2 border-white/20 bg-white/10 p-3 transition-colors hover:bg-white/20"
+                  >
+                    <ArrowDownUp className="h-5 w-5 text-white" />
+                  </button>
                 </div>
 
-                <button
-                  onClick={handleConvert}
-                  disabled={loading}
-                  className="brutal-btn-primary flex w-full items-center justify-center gap-3 py-4 text-sm font-black uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-60 sm:py-5 sm:text-base"
+                {/* To Currency */}
+                <div>
+                  <label className="mb-2 block text-xs font-black uppercase tracking-wider text-white sm:text-sm">
+                    To
+                  </label>
+                  <Select value={toCurrency} onValueChange={setToCurrency}>
+                    <SelectTrigger className="h-auto w-full rounded-none border-2 border-white/20 bg-black/60 px-4 py-3 font-mono text-sm text-white transition-colors focus:border-white/60 focus:outline-none sm:py-4 sm:text-base">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-none border-2 border-white/20 bg-black font-mono text-white">
+                      <SelectItem value="SOL" className="text-white hover:bg-white/10 focus:bg-white/10">SOL</SelectItem>
+                      <SelectItem value="USDC" className="text-white hover:bg-white/10 focus:bg-white/10">USDC</SelectItem>
+                      <SelectItem value="USDT" className="text-white hover:bg-white/10 focus:bg-white/10">USDT</SelectItem>
+                      <SelectItem value="USDC+" className="text-white hover:bg-white/10 focus:bg-white/10">USDC+ (Yield)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Estimated Output */}
+                <div className="rounded-none border border-white/20 bg-white/5 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs text-white/60 sm:text-sm">Estimated output:</span>
+                    <span className="font-mono text-sm font-black text-white sm:text-base">
+                      {swapAmount ? (parseFloat(swapAmount) * 0.98).toFixed(4) : '0.00'} {toCurrency}
+                    </span>
+                  </div>
+                  {fromCurrency === 'USDC' && toCurrency === 'USDC+' && (
+                    <div className="mt-2 border-t border-white/10 pt-2">
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="font-mono text-xs text-white/60">APY:</span>
+                        <span className="text-sm font-black text-white/80">20%</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs text-white/60">Annual earnings:</span>
+                        <span className="text-sm font-black text-white/80">
+                          ${swapAmount ? (parseFloat(swapAmount) * 0.2).toFixed(2) : '0.00'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <button 
+                  onClick={handleSwap}
+                  disabled={fromCurrency === toCurrency || loading}
+                  className="brutal-btn-primary flex w-full items-center justify-center gap-3 py-4 text-sm font-black uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-50 sm:py-5 sm:text-base"
                 >
-                  {loading ? "Processing" : "Convert to Yield"}
-                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
+                  {fromCurrency === toCurrency ? 'Select different tokens' : loading ? 'Processing...' : 'Swap'}
+                  <ArrowDownUp className="h-4 w-4 sm:h-5 sm:w-5" />
                 </button>
               </div>
             </div>

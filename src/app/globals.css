@@ -138,12 +138,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #70ec9f, #5dd889);
+  background: linear-gradient(180deg, #6b7280, #9ca3af);
   border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #5dd889, #70ec9f);
+  background: linear-gradient(180deg, #9ca3af, #d1d5db);
 }
 
 /* Brutalist + surveillance styling */
