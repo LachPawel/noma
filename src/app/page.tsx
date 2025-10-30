@@ -546,7 +546,7 @@ export default function Home() {
 										<div className="flex items-start gap-2">
 											<Smartphone className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
 											<p className="text-[10px] sm:text-xs font-mono text-white/80">
-												Select <span className="text-red-500 font-bold">&quot;Add to Home Screen&quot;</span>
+												Select <span className="text-red-500 font-bold">"Add to Home Screen"</span>
 											</p>
 										</div>
 									</div>
