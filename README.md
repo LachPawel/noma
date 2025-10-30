@@ -1,3 +1,7 @@
+<p align="center">
+   <img src="./public/icon.svg" alt="Noma Cash app icon" width="160" />
+</p>
+
 # 🏴‍☠️ Noma Cash
 
 > **Anonymous. Ungovernable. Decentralized.**
