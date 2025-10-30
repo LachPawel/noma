@@ -9,6 +9,11 @@ import SoundControl from '@/components/SoundControl'
 export const metadata = {
   title: 'Noma.cash - Privacy-First Neobank',
   description: 'Earn yield on stablecoins with financial privacy',
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/apple-touch-icon.svg',
+  },
 }
 
 export default function RootLayout({
