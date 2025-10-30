@@ -8,6 +8,8 @@ import { Flame, Heart, Share2, Smartphone, X, Zap } from 'lucide-react';
 
 import VideoBackground from '@/components/VideoBackground';
 import Dashboard from '@/components/Dashboard';
+import SuccessModal from '@/components/SuccessModal';
+import LoadingModal from '@/components/LoadingModal';
 import {
 	Dialog,
 	DialogClose,
@@ -62,26 +64,63 @@ export default function Home() {
 	const [yieldEarned, setYieldEarned] = useState(0);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
+	const [isDemoMode, setIsDemoMode] = useState(false);
+	const [successModal, setSuccessModal] = useState<{
+		isOpen: boolean;
+		title: string;
+		message: string;
+		details?: string;
+		txHash?: string;
+		amount?: string;
+		currency?: string;
+		fromCurrency?: string;
+		toCurrency?: string;
+		type: 'transfer' | 'convert' | 'swap' | 'redeem';
+	}>({
+		isOpen: false,
+		title: '',
+		message: '',
+		type: 'transfer'
+	});
+	const [loadingModal, setLoadingModal] = useState<{
+		isOpen: boolean;
+		title: string;
+		message: string;
+		type: 'transfer' | 'convert' | 'swap' | 'redeem';
+	}>({
+		isOpen: false,
+		title: '',
+		message: '',
+		type: 'transfer'
+	});
 
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
 
-		// Auto-redirect to dashboard if wallet is connected
-		if (connected && publicKey && view === 'landing') {
+		// Auto-redirect to dashboard if wallet is connected or in demo mode
+		if ((connected && publicKey && view === 'landing') || (isDemoMode && view === 'landing')) {
 			setView('dashboard');
 		}
-	}, [connected, publicKey, view]);
+	}, [connected, publicKey, view, isDemoMode]);
 
-	// Additional check on mount to handle already-connected wallets
+	// Additional check on mount to handle already-connected wallets or demo mode
 	useEffect(() => {
 		console.log('Component mounted, checking wallet connection...');
-		if (connected && publicKey) {
-			console.log('Wallet already connected on mount, redirecting...');
+		if ((connected && publicKey) || isDemoMode) {
+			console.log('Wallet already connected on mount or demo mode active, redirecting...');
 			setView('dashboard');
 		}
-	}, [connected, publicKey]);
+	}, [connected, publicKey, isDemoMode]);
 
 	const loadBalances = useCallback(async () => {
+		if (isDemoMode) {
+			// Demo mode with mocked data
+			setBalance(2.45);
+			setUsdcBalance(1250.50);
+			setYieldEarned(156.78);
+			return;
+		}
+
 		const address = publicKey?.toString();
 		if (!address) {
 			return;
@@ -104,12 +143,12 @@ export default function Home() {
 		} catch (err) {
 			console.error('Failed to load balances:', err);
 		}
-	}, [publicKey]);
+	}, [publicKey, isDemoMode]);
 
 	useEffect(() => {
 		if (view !== 'dashboard') return;
 		void loadBalances();
-	}, [view, loadBalances, connected]);
+	}, [view, loadBalances, connected, isDemoMode]);
 
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
@@ -200,7 +239,9 @@ export default function Home() {
 	const handleLogout = async () => {
 		// Disconnect the wallet
 		try {
-			await disconnect();
+			if (!isDemoMode) {
+				await disconnect();
+			}
 		} catch (error) {
 			console.log('Error disconnecting wallet:', error);
 		}
@@ -211,6 +252,7 @@ export default function Home() {
 		setYieldEarned(0);
 		setView('landing');
 		setError('');
+		setIsDemoMode(false);
 	};
 
 	const handleEnterApp = async () => {
@@ -234,9 +276,107 @@ export default function Home() {
 		}
 	};
 
+	const handleEnterDemoMode = () => {
+		setIsDemoMode(true);
+		setView('dashboard');
+		// Set demo data immediately
+		setBalance(2.45);
+		setUsdcBalance(1250.50);
+		setYieldEarned(156.78);
+	};
+
+	const showSuccessModal = (
+		title: string,
+		message: string,
+		type: 'transfer' | 'convert' | 'swap' | 'redeem',
+		options?: {
+			details?: string;
+			amount?: string;
+			currency?: string;
+			fromCurrency?: string;
+			toCurrency?: string;
+		}
+	) => {
+		// Generate a mock transaction hash for demo
+		const mockTxHash = `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+		
+		setSuccessModal({
+			isOpen: true,
+			title,
+			message,
+			type,
+			txHash: mockTxHash,
+			...options
+		});
+	};
+
+	const closeSuccessModal = () => {
+		setSuccessModal(prev => ({ ...prev, isOpen: false }));
+	};
+
+	const showLoadingModal = (
+		title: string,
+		message: string,
+		type: 'transfer' | 'convert' | 'swap' | 'redeem'
+	) => {
+		setLoadingModal({
+			isOpen: true,
+			title,
+			message,
+			type
+		});
+	};
+
+	const hideLoadingModal = () => {
+		setLoadingModal(prev => ({ ...prev, isOpen: false }));
+	};
+
 	const handleTransfer = useCallback(
 		async (amount: string, destination: string): Promise<boolean> => {
 			const parsedAmount = parseFloat(amount);
+			
+			if (isDemoMode) {
+				// Demo mode simulation
+				if (!destination || Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+					setError('Enter a valid recipient and amount.');
+					return false;
+				}
+				
+				setLoading(true);
+				setError('');
+				
+				// Show loading modal
+				showLoadingModal(
+					'Processing Transfer',
+					'Sending your USDC securely on the blockchain...',
+					'transfer'
+				);
+				
+				// Simulate processing time
+				await new Promise(resolve => setTimeout(resolve, 2000));
+				
+				// Hide loading modal
+				hideLoadingModal();
+				
+				// Update demo balances
+				setUsdcBalance(prev => Math.max(0, prev - parsedAmount));
+				setError('');
+				setLoading(false);
+				
+				// Show success modal instead of alert
+				showSuccessModal(
+					'Transfer Successful',
+					'Your transaction has been completed successfully!',
+					'transfer',
+					{
+						amount: parsedAmount.toString(),
+						currency: 'USDC',
+						details: `Sent to ${destination.slice(0, 8)}...${destination.slice(-4)}`
+					}
+				);
+				return true;
+			}
+			
 			if (!publicKey || !connected) {
 				setError('Connect wallet to send funds.');
 				return false;
@@ -251,12 +391,56 @@ export default function Home() {
 			setLoading(false);
 			return false;
 		},
-		[publicKey, connected],
+		[publicKey, connected, isDemoMode],
 	);
 
 	const handleConvertToYield = useCallback(
 		async (amount: string): Promise<boolean> => {
 			const parsedAmount = parseFloat(amount);
+			
+			if (isDemoMode) {
+				// Demo mode simulation
+				if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+					setError('Enter a valid amount to convert.');
+					return false;
+				}
+				
+				setLoading(true);
+				setError('');
+				
+				// Show loading modal
+				showLoadingModal(
+					'Converting Assets',
+					'Converting your USDC to yield-bearing stablecoin...',
+					'convert'
+				);
+				
+				// Simulate processing time
+				await new Promise(resolve => setTimeout(resolve, 1500));
+				
+				// Hide loading modal
+				hideLoadingModal();
+				
+				// Update demo balances - convert USDC to yield-bearing
+				setUsdcBalance(prev => Math.max(0, prev - parsedAmount));
+				setYieldEarned(prev => prev + parsedAmount * 0.002); // Add 0.2% as earned yield
+				setError('');
+				setLoading(false);
+				
+				// Show success modal instead of alert
+				showSuccessModal(
+					'Conversion Successful',
+					'Your USDC has been converted to yield-bearing stablecoin!',
+					'convert',
+					{
+						amount: parsedAmount.toString(),
+						currency: 'USDC',
+						details: `Earning up to 20% APY`
+					}
+				);
+				return true;
+			}
+			
 			if (!publicKey || !signTransaction) {
 				setError('Connect wallet to convert to yield-bearing stablecoin.');
 				return false;
@@ -317,12 +501,72 @@ export default function Home() {
 				setLoading(false);
 			}
 		},
-		[loadBalances, publicKey, signTransaction],
+		[loadBalances, publicKey, signTransaction, isDemoMode],
 	);
 
 	const handleSwap = useCallback(
 		async (amount: string, fromCurrency: string, toCurrency: string): Promise<boolean> => {
 			const parsedAmount = parseFloat(amount);
+			
+			if (isDemoMode) {
+				// Demo mode simulation
+				if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+					setError('Enter a valid amount to swap.');
+					return false;
+				}
+				if (fromCurrency === toCurrency) {
+					setError('Select different tokens to swap.');
+					return false;
+				}
+				
+				setLoading(true);
+				setError('');
+				
+				// Show loading modal
+				showLoadingModal(
+					'Swapping Tokens',
+					`Finding the best rate for ${fromCurrency} → ${toCurrency}...`,
+					'swap'
+				);
+				
+				// Simulate processing time
+				await new Promise(resolve => setTimeout(resolve, 1800));
+				
+				// Hide loading modal
+				hideLoadingModal();
+				
+				// Simulate swap by adjusting balances
+				let exchangeRate = '';
+				if (fromCurrency === 'USDC' && toCurrency === 'SOL') {
+					const solReceived = parsedAmount / 180; // Mock exchange rate
+					setUsdcBalance(prev => Math.max(0, prev - parsedAmount));
+					setBalance(prev => prev + solReceived);
+					exchangeRate = `1 SOL = $180`;
+				} else if (fromCurrency === 'SOL' && toCurrency === 'USDC') {
+					const usdcReceived = parsedAmount * 180; // Mock exchange rate
+					setBalance(prev => Math.max(0, prev - parsedAmount));
+					setUsdcBalance(prev => prev + usdcReceived);
+					exchangeRate = `1 SOL = $180`;
+				}
+				
+				setError('');
+				setLoading(false);
+				
+				// Show success modal instead of alert
+				showSuccessModal(
+					'Swap Successful',
+					'Your tokens have been swapped successfully!',
+					'swap',
+					{
+						amount: parsedAmount.toString(),
+						fromCurrency,
+						toCurrency,
+						details: exchangeRate
+					}
+				);
+				return true;
+			}
+			
 			if (!publicKey || !signTransaction) {
 				setError('Connect wallet to swap tokens.');
 				return false;
@@ -356,7 +600,85 @@ export default function Home() {
 				setLoading(false);
 			}
 		},
-		[loadBalances, publicKey, signTransaction],
+		[loadBalances, publicKey, signTransaction, isDemoMode],
+	);
+
+	const handleRedeemYield = useCallback(
+		async (amount: string): Promise<boolean> => {
+			const parsedAmount = parseFloat(amount);
+			
+			if (isDemoMode) {
+				// Demo mode simulation
+				if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+					setError('Enter a valid amount to redeem.');
+					return false;
+				}
+				
+				setLoading(true);
+				setError('');
+				
+				// Show loading modal
+				showLoadingModal(
+					'Redeeming Yield',
+					'Processing your yield redemption to wallet...',
+					'redeem'
+				);
+				
+				// Simulate processing time
+				await new Promise(resolve => setTimeout(resolve, 1200));
+				
+				// Hide loading modal
+				hideLoadingModal();
+				
+				// Redeem yield - move from yield earned to USDC balance
+				const redeemableAmount = Math.min(parsedAmount, yieldEarned);
+				setYieldEarned(prev => Math.max(0, prev - redeemableAmount));
+				setUsdcBalance(prev => prev + redeemableAmount);
+				setError('');
+				setLoading(false);
+				
+				// Show success modal instead of alert
+				showSuccessModal(
+					'Yield Redeemed',
+					'Your yield has been successfully redeemed to your wallet!',
+					'redeem',
+					{
+						amount: redeemableAmount.toFixed(2),
+						currency: 'USDC',
+						details: `From yield earnings`
+					}
+				);
+				return true;
+			}
+			
+			if (!publicKey || !signTransaction) {
+				setError('Connect wallet to redeem yield.');
+				return false;
+			}
+			if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+				setError('Enter a valid amount to redeem.');
+				return false;
+			}
+
+			setLoading(true);
+			setError('');
+
+			try {
+				// Simulate yield redemption
+				window.alert(`Yield redemption functionality coming soon!\nRedeem ${parsedAmount} USDC from yield`);
+				
+				await new Promise(resolve => setTimeout(resolve, 1000));
+				await loadBalances();
+				setError('');
+				return true;
+			} catch (err) {
+				setError(err instanceof Error ? err.message : 'Yield redemption failed');
+				return false;
+			} finally {
+				setLoading(false);
+			}
+		},
+		[loadBalances, publicKey, signTransaction, isDemoMode, yieldEarned],
 	);
 
 	const currentWalletAddress = publicKey?.toString() ?? null;
@@ -370,18 +692,19 @@ export default function Home() {
 				<div className="relative z-10">
 					<Dashboard
 						onBack={handleLogout}
-						walletAddress={currentWalletAddress}
+						walletAddress={isDemoMode ? 'Demo_Mode_Wallet_123456789' : currentWalletAddress}
 						totalBalance={totalBalance}
 						usdcBalance={usdcBalance}
 						yieldEarned={yieldEarned}
 						onSend={handleTransfer}
 						onConvert={handleConvertToYield}
+						onRedeemYield={handleRedeemYield}
 						onSwap={handleSwap}
 						onRefreshBalances={loadBalances}
 						loading={loading}
 						error={error}
-						walletButton={<WalletMultiButton />}
-						connected={connected}
+						walletButton={isDemoMode ? <div className="text-xs text-white/60 font-mono">DEMO MODE</div> : <WalletMultiButton />}
+						connected={isDemoMode || connected}
 					/>
 				</div>
 			</div>
@@ -404,6 +727,13 @@ export default function Home() {
 							<span className="text-white font-bold hidden md:inline">{'>'} ANONYMOUS</span>
 						</div>
 						<div className="flex items-center gap-2 sm:gap-3">
+							<button
+								onClick={handleEnterDemoMode}
+								className="text-[0.5rem] sm:text-[0.6rem] font-mono text-white/40 hover:text-white/70 transition-colors uppercase tracking-widest border border-white/20 hover:border-white/40 px-2 py-1 bg-black/60 hover:bg-black/80"
+								title="Enter Demo Mode"
+							>
+								DEMO
+							</button>
 							<div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
 							<span className="text-[0.6rem] sm:text-xs font-mono text-white uppercase tracking-widest font-bold">LIVE</span>
 						</div>
@@ -537,6 +867,27 @@ export default function Home() {
 					</div>
 				</DialogContent>
 			</Dialog>
+
+			<SuccessModal
+				isOpen={successModal.isOpen}
+				onClose={closeSuccessModal}
+				title={successModal.title}
+				message={successModal.message}
+				details={successModal.details}
+				txHash={successModal.txHash}
+				amount={successModal.amount}
+				currency={successModal.currency}
+				fromCurrency={successModal.fromCurrency}
+				toCurrency={successModal.toCurrency}
+				type={successModal.type}
+			/>
+
+			<LoadingModal
+				isOpen={loadingModal.isOpen}
+				title={loadingModal.title}
+				message={loadingModal.message}
+				type={loadingModal.type}
+			/>
 
 			{showPwaBanner && (
 				<div
