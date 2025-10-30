@@ -36,6 +36,8 @@ export default function SuccessModal({
   toCurrency,
   type
 }: SuccessModalProps) {
+  console.log('SuccessModal render:', { isOpen, title, message, type });
+  
   const [copied, setCopied] = React.useState(false);
 
   const copyTxHash = () => {
@@ -67,7 +69,7 @@ export default function SuccessModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md w-[95vw] bg-black border-4 border-white/30 p-0">
+      <DialogContent className="max-w-md w-[95vw] bg-black border-4 border-white/30 p-0" style={{ zIndex: 99999 }}>
         <DialogTitle className="sr-only">{title}</DialogTitle>
         <DialogDescription className="sr-only">
           {message}

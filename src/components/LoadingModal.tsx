@@ -22,6 +22,8 @@ export default function LoadingModal({
   message,
   type
 }: LoadingModalProps) {
+  console.log('LoadingModal render:', { isOpen, title, message, type });
+  
   const getTypeColor = () => {
     switch (type) {
       case 'transfer':
@@ -39,7 +41,7 @@ export default function LoadingModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-        <DialogContent className="max-w-sm w-[90vw] bg-black border-4 border-white/30 p-0">
+      <DialogContent className="max-w-sm w-[90vw] bg-black border-4 border-white/30 p-0" style={{ zIndex: 99999 }}>
         <DialogTitle className="sr-only">{title}</DialogTitle>
         <DialogDescription className="sr-only">
           {message}

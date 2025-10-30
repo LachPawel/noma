@@ -687,27 +687,49 @@ export default function Home() {
 
 	if (view === 'dashboard') {
 		return (
-			<div className="relative min-h-screen overflow-hidden bg-black text-white">
-				<VideoBackground />
-				<div className="relative z-10">
-					<Dashboard
-						onBack={handleLogout}
-						walletAddress={isDemoMode ? 'Demo_Mode_Wallet_123456789' : currentWalletAddress}
-						totalBalance={totalBalance}
-						usdcBalance={usdcBalance}
-						yieldEarned={yieldEarned}
-						onSend={handleTransfer}
-						onConvert={handleConvertToYield}
-						onRedeemYield={handleRedeemYield}
-						onSwap={handleSwap}
-						onRefreshBalances={loadBalances}
-						loading={loading}
-						error={error}
-						walletButton={isDemoMode ? <div className="text-xs text-white/60 font-mono">DEMO MODE</div> : <WalletMultiButton />}
-						connected={isDemoMode || connected}
-					/>
+			<>
+				<div className="relative min-h-screen overflow-hidden bg-black text-white">
+					<VideoBackground />
+					<div className="relative z-10">
+						<Dashboard
+							onBack={handleLogout}
+							walletAddress={isDemoMode ? 'Demo_Mode_Wallet_123456789' : currentWalletAddress}
+							totalBalance={totalBalance}
+							usdcBalance={usdcBalance}
+							yieldEarned={yieldEarned}
+							onSend={handleTransfer}
+							onConvert={handleConvertToYield}
+							onRedeemYield={handleRedeemYield}
+							onSwap={handleSwap}
+							onRefreshBalances={loadBalances}
+							loading={loading}
+							error={error}
+							walletButton={isDemoMode ? <div className="text-xs text-white/60 font-mono">DEMO MODE</div> : <WalletMultiButton />}
+							connected={isDemoMode || connected}
+						/>
+					</div>
 				</div>
-			</div>
+				<SuccessModal
+					isOpen={successModal.isOpen}
+					onClose={closeSuccessModal}
+					title={successModal.title}
+					message={successModal.message}
+					details={successModal.details}
+					txHash={successModal.txHash}
+					amount={successModal.amount}
+					currency={successModal.currency}
+					fromCurrency={successModal.fromCurrency}
+					toCurrency={successModal.toCurrency}
+					type={successModal.type}
+				/>
+
+				<LoadingModal
+					isOpen={loadingModal.isOpen}
+					title={loadingModal.title}
+					message={loadingModal.message}
+					type={loadingModal.type}
+				/>
+			</>
 		);
 	}
 

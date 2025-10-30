@@ -1,8 +1,8 @@
-# 🏴‍☠️ AnonBank
+# 🏴‍☠️ Noma Cash
 
 > **Anonymous. Ungovernable. Decentralized.**
 
-AnonBank is a privacy-focused decentralized banking application built on Solana. Experience true financial freedom with anonymous transactions, yield earning, and a cyberpunk-inspired interface that puts you in control.
+Noma Cash is a privacy-focused decentralized banking application built on Solana. Experience true financial freedom with anonymous transactions, yield earning, and a cyberpunk-inspired interface that puts you in control.
 
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-15.5.5-black.svg)
@@ -122,7 +122,7 @@ anonbank/
 
 ## 📱 PWA Support
 
-AnonBank can be installed as a Progressive Web App (PWA):
+Noma Cash can be installed as a Progressive Web App (PWA):
 
 1. Visit the app in your mobile browser
 2. Look for the "Add to Home Screen" prompt
@@ -153,14 +153,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔗 Links
 
-- **Live App**: [anonbank.app](https://anonbank.app)
-- **Documentation**: [docs.anonbank.app](https://docs.anonbank.app)
-- **Twitter**: [@AnonBankApp](https://twitter.com/AnonBankApp)
-- **Discord**: [Join Community](https://discord.gg/anonbank)
+- **Live App**: [nomacash.app](https://nomacash.app)
+- **Documentation**: [docs.nomacash.app](https://docs.nomacash.app)
+- **Twitter**: [@NomaCashApp](https://twitter.com/NomaCashApp)
+- **Discord**: [Join Community](https://discord.gg/nomacash)
 
 ## ⚠️ Disclaimer
 
-AnonBank is experimental software. Use at your own risk. Always do your own research and never invest more than you can afford to lose. Decentralized finance involves significant risks including but not limited to smart contract bugs, market volatility, and regulatory uncertainty.
+Noma Cash is experimental software. Use at your own risk. Always do your own research and never invest more than you can afford to lose. Decentralized finance involves significant risks including but not limited to smart contract bugs, market volatility, and regulatory uncertainty.
 
 ---
 

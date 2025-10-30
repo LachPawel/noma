@@ -177,13 +177,17 @@ export default function Dashboard({
 
       <div className="w-full max-w-4xl space-y-4 sm:space-y-6">
         <div className="mb-3 text-center sm:mb-6">
-          <h1 className="brutal-glitch mb-2 block text-8xl font-black leading-none tracking-tighter text-white sm:text-9xl md:text-[10rem] lg:text-[12rem] xl:text-[16rem] 2xl:text-[20rem]">
-            <span className="word block" data-delay="300">
-              NOMA
-            </span>
+          <h1 
+            className="text-white uppercase tracking-tighter brutal-glitch mb-2"
+            style={{ fontFamily: 'Anton, sans-serif', fontSize: 'clamp(4rem, 15vw, 8rem)', lineHeight: '0.9' }}
+          >
+            <span className="word block" data-delay="300">NOMA</span>
           </h1>
-          <div className="text-white/90 word inline-block font-mono text-3xl font-bold tracking-[0.3em] sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl" data-delay="500">
-            CASH
+          <div 
+            className="text-white/90 uppercase tracking-[0.3em] md:tracking-[0.4em] font-mono font-bold"
+            style={{ fontSize: 'clamp(1rem, 4vw, 2rem)' }}
+          >
+            <span className="word inline-block" data-delay="500">CASH</span>
           </div>
         </div>
 
@@ -529,6 +533,12 @@ export default function Dashboard({
                           <span className="text-sm font-black text-green-400">20%</span>
                         </div>
                         <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs text-white/60">Currently Staked:</span>
+                          <span className="text-sm font-black text-yellow-400">
+                            ${(yieldEarned / 0.002).toFixed(2)} USDC+
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
                           <span className="font-mono text-xs text-white/60">You will receive:</span>
                           <span className="text-sm font-black text-white">
                             {yieldAmount ? parseFloat(yieldAmount).toFixed(2) : '0.00'} USDC+
@@ -543,6 +553,18 @@ export default function Dashboard({
                       </>
                     ) : (
                       <>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs text-white/60">Currently Staked:</span>
+                          <span className="text-sm font-black text-yellow-400">
+                            ${(yieldEarned / 0.002).toFixed(2)} USDC+
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs text-white/60">Available to Redeem:</span>
+                          <span className="text-sm font-black text-green-400">
+                            ${Math.min(parseFloat(yieldAmount || '0'), yieldEarned).toFixed(2)}
+                          </span>
+                        </div>
                         <div className="flex items-center justify-between">
                           <span className="font-mono text-xs text-white/60">Exchange rate:</span>
                           <span className="text-sm font-black text-white">1 USDC+ = 1 USDC</span>
