@@ -4,7 +4,6 @@ import { WalletContextProvider } from '@/app/components/WalletProvider'
 import { TwentyFirstToolbar } from '@21st-extension/toolbar-next'
 import { ReactPlugin } from '@21st-extension/react'
 import AmbientSound from '@/components/AmbientSound'
-import SoundControl from '@/components/SoundControl'
 
 export const metadata = {
   title: 'Noma.cash - Privacy-First Neobank',
@@ -36,7 +35,6 @@ export default function RootLayout({
             fadeOutDuration={2000}
             playbackRate={1.0}
           />
-          <SoundControl />
           {children}
         </WalletContextProvider>
         <TwentyFirstToolbar config={{ plugins: [ReactPlugin] }} />

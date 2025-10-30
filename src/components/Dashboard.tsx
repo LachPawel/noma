@@ -164,12 +164,12 @@ export default function Dashboard({
 
       <div className="w-full max-w-4xl space-y-4 sm:space-y-6">
         <div className="mb-3 text-center sm:mb-6">
-          <h1 className="brutal-glitch mb-2 block text-7xl font-black leading-none tracking-tighter text-white sm:text-7xl md:text-8xl lg:text-9xl xl:text-[12rem]">
+          <h1 className="brutal-glitch mb-2 block text-8xl font-black leading-none tracking-tighter text-white sm:text-9xl md:text-[10rem] lg:text-[12rem] xl:text-[16rem] 2xl:text-[20rem]">
             <span className="word block" data-delay="300">
               NOMA
             </span>
           </h1>
-          <div className="text-white/90 word inline-block font-mono text-2xl font-bold tracking-[0.3em] sm:text-2xl md:text-3xl lg:text-4xl" data-delay="500">
+          <div className="text-white/90 word inline-block font-mono text-3xl font-bold tracking-[0.3em] sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl" data-delay="500">
             CASH
           </div>
         </div>

@@ -422,13 +422,13 @@ export default function Home() {
 					<div className="mb-3 sm:mb-6">
 						<h1 
 							className="text-white uppercase tracking-tighter brutal-glitch"
-							style={{ fontFamily: 'Anton, sans-serif', fontSize: 'clamp(4rem, 15vw, 8rem)', lineHeight: '0.9' }}
+							style={{ fontFamily: 'Anton, sans-serif', fontSize: 'clamp(6rem, 20vw, 14rem)', lineHeight: '0.9' }}
 						>
 							<span className="word block" data-delay="300">NOMA</span>
 						</h1>
 						<div 
 							className="text-white/90 uppercase tracking-[0.3em] md:tracking-[0.4em] font-mono font-bold"
-							style={{ fontSize: 'clamp(0.75rem, 3vw, 1.5rem)' }}
+							style={{ fontSize: 'clamp(1.25rem, 5vw, 3rem)' }}
 						>
 							<span className="word inline-block" data-delay="500">CASH</span>
 						</div>
