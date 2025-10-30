@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ArrowDownUp,
   ArrowLeft,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SOL_USD_RATE, isStablecoin } from "@/lib/constants";
 
 interface DashboardProps {
   onBack: () => void;
@@ -66,6 +67,27 @@ export default function Dashboard({
   // Send and Receive currency states
   const [sendCurrency, setSendCurrency] = useState("USDC");
   const [receiveCurrency, setReceiveCurrency] = useState("USDC");
+
+  const estimatedSwapOutput = useMemo(() => {
+    const amount = parseFloat(swapAmount);
+    if (!swapAmount || Number.isNaN(amount)) {
+      return "0.00";
+    }
+
+    if (isStablecoin(fromCurrency) && toCurrency === "SOL") {
+      return (amount / SOL_USD_RATE).toFixed(4);
+    }
+
+    if (fromCurrency === "SOL" && isStablecoin(toCurrency)) {
+      return (amount * SOL_USD_RATE).toFixed(2);
+    }
+
+    if (isStablecoin(fromCurrency) && isStablecoin(toCurrency)) {
+      return amount.toFixed(2);
+    }
+
+    return amount.toFixed(4);
+  }, [swapAmount, fromCurrency, toCurrency]);
 
   useEffect(() => {
     const words = document.querySelectorAll(".word");
@@ -695,7 +717,7 @@ export default function Dashboard({
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs text-white/60 sm:text-sm">Estimated output:</span>
                     <span className="font-mono text-sm font-black text-white sm:text-base">
-                      {swapAmount ? (parseFloat(swapAmount) * 0.98).toFixed(4) : '0.00'} {toCurrency}
+                      {estimatedSwapOutput} {toCurrency}
                     </span>
                   </div>
                 </div>

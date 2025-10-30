@@ -10,6 +10,7 @@ import VideoBackground from '@/components/VideoBackground';
 import Dashboard from '@/components/Dashboard';
 import SuccessModal from '@/components/SuccessModal';
 import LoadingModal from '@/components/LoadingModal';
+import { SOL_USD_RATE, formatSolUsdRate, isStablecoin } from '@/lib/constants';
 import {
 	Dialog,
 	DialogClose,
@@ -51,7 +52,6 @@ const anarchyTexts = [
 	'NO SURVEILLANCE',
 ];
 
-const SOL_USD_RATE = 186.54;
 
 export default function Home() {
 	const { connected, publicKey, signTransaction, disconnect, connect, wallets, select } = useWallet();
@@ -539,16 +539,22 @@ export default function Home() {
 				
 				// Simulate swap by adjusting balances
 				let exchangeRate = '';
-				if (fromCurrency === 'USDC' && toCurrency === 'SOL') {
-					const solReceived = parsedAmount / SOL_USD_RATE; // Mock exchange rate
+				if (isStablecoin(fromCurrency) && toCurrency === 'SOL') {
+					const solReceived = parsedAmount / SOL_USD_RATE;
 					setUsdcBalance(prev => Math.max(0, prev - parsedAmount));
 					setBalance(prev => prev + solReceived);
-					exchangeRate = `1 SOL = ${SOL_USD_RATE.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
-				} else if (fromCurrency === 'SOL' && toCurrency === 'USDC') {
-					const usdcReceived = parsedAmount * SOL_USD_RATE; // Mock exchange rate
+					exchangeRate = `1 SOL = ${formatSolUsdRate()} USD`;
+				} else if (fromCurrency === 'SOL' && isStablecoin(toCurrency)) {
+					const usdReceived = parsedAmount * SOL_USD_RATE;
 					setBalance(prev => Math.max(0, prev - parsedAmount));
-					setUsdcBalance(prev => prev + usdcReceived);
-					exchangeRate = `1 SOL = ${SOL_USD_RATE.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
+					setUsdcBalance(prev => prev + usdReceived);
+					exchangeRate = `1 SOL = ${formatSolUsdRate()} USD`;
+				} else if (isStablecoin(fromCurrency) && isStablecoin(toCurrency)) {
+					exchangeRate = `1 ${fromCurrency} = 1 ${toCurrency}`;
+				} else {
+					setError('Swap rate unavailable for this pair.');
+					setLoading(false);
+					return false;
 				}
 				
 				setError('');
