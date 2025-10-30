@@ -234,6 +234,21 @@ body {
   pointer-events: none;
 }
 
+.brutal-word {
+  animation: brutal-glitch 0.4s infinite;
+  font-family: 'Anton', sans-serif;
+  text-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 3px 3px 0 rgba(0, 0, 0, 0.8);
+}
+
+.brutal-statement {
+  animation: brutal-glitch 0.6s infinite;
+  font-family: 'Anton', sans-serif;
+}
+
+.brutal-bottom {
+  animation: brutal-glitch 2s infinite;
+}
+
 .word {
   display: inline-block;
   opacity: 0;
@@ -262,9 +277,84 @@ body {
   font-family: 'Anton', sans-serif;
   animation: glitch-appear 2s ease-in-out forwards;
   text-shadow: 1px 1px 0 rgba(220, 38, 38, 0.4), -1px -1px 0 rgba(0, 0, 0, 0.8), 0 0 15px rgba(220, 38, 38, 0.5);
+  filter: contrast(1.3);
   border: 2px solid #dc2626;
   padding: 8px 12px;
   box-shadow: 0 0 10px rgba(220, 38, 38, 0.4), inset 0 0 10px rgba(220, 38, 38, 0.1);
+}
+
+.grunge-stat {
+  text-align: center;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.grunge-stat:hover {
+  transform: scale(1.1);
+}
+
+.grunge-stat:hover .grunge-text {
+  color: #dc2626;
+  text-shadow: 2px 2px 0 rgba(220, 38, 38, 0.3), -2px -2px 0 rgba(0, 0, 0, 0.8);
+}
+
+.grunge-stat:hover .grunge-flicker {
+  color: #dc2626;
+}
+
+.grunge-text {
+  font-family: 'Anton', sans-serif;
+  position: relative;
+  text-shadow: 2px 2px 0 rgba(255, 255, 255, 0.3), -2px -2px 0 rgba(0, 0, 0, 0.8);
+  filter: contrast(1.2);
+}
+
+.grunge-flicker {
+  animation: grunge-flicker 3s ease-in-out infinite;
+}
+
+@keyframes grunge-flicker {
+  0%,
+  100% {
+    opacity: 0.6;
+    filter: contrast(1);
+  }
+  10% {
+    opacity: 0.8;
+    filter: contrast(1.3);
+  }
+  20% {
+    opacity: 0.5;
+    filter: contrast(0.9);
+  }
+  30% {
+    opacity: 0.9;
+    filter: contrast(1.1);
+  }
+  40% {
+    opacity: 0.6;
+    filter: contrast(1);
+  }
+  50% {
+    opacity: 0.85;
+    filter: contrast(1.2);
+  }
+  60% {
+    opacity: 0.55;
+    filter: contrast(0.95);
+  }
+  70% {
+    opacity: 0.75;
+    filter: contrast(1.15);
+  }
+  80% {
+    opacity: 0.7;
+    filter: contrast(1.05);
+  }
+  90% {
+    opacity: 0.8;
+    filter: contrast(1.1);
+  }
 }
 
 .corner-bracket {
@@ -396,6 +486,10 @@ body {
 .wallet-button-wrapper .wallet-adapter-button:hover {
   border-color: rgba(255, 255, 255, 0.6);
   background: rgba(0, 0, 0, 0.85);
+}
+
+.manifesto-dialog > button:last-of-type {
+  display: none;
 }
 
 .wallet-button-wrapper .wallet-adapter-button-trigger {

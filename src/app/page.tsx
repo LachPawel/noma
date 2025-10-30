@@ -29,7 +29,6 @@ type GlitchText = {
 	text: string;
 	x: number;
 	y: number;
-	size: number;
 };
 
 interface BeforeInstallPromptEvent extends Event {
@@ -122,7 +121,6 @@ export default function Home() {
 				text: anarchyTexts[Math.floor(Math.random() * anarchyTexts.length)],
 				x: Math.random() * 80 + 10,
 				y: Math.random() * 80 + 10,
-				size: Math.random() * 0.6 + 0.6,
 			}));
 			setGlitchTexts(newTexts);
 		}, 2000);
@@ -325,7 +323,6 @@ export default function Home() {
 	const currentWalletAddress = publicKey?.toString() ?? null;
 	const totalBalance = balance + usdcBalance;
 	const isIOSDevice = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
-	const currentTime = new Date().toLocaleTimeString();
 
 	if (view === 'dashboard') {
 		return (
@@ -352,234 +349,223 @@ export default function Home() {
 	}
 
 	return (
-		<div className="relative min-h-screen overflow-hidden bg-black text-white">
+		<div className="bg-black text-white min-h-screen relative overflow-hidden">
 			<VideoBackground />
 
-			<div className="fixed top-0 left-0 right-0 z-50">
-				<div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-3 font-mono text-[0.6rem] uppercase tracking-widest text-white/60 sm:px-6 sm:py-4 sm:text-xs">
-					<div className="flex items-center gap-3 sm:gap-6 md:gap-8">
-						<span className="hidden font-bold text-white sm:inline">&gt; SURVEILLANCE_OFF</span>
-						<span className="hidden text-white/40 sm:inline">|</span>
-						<span className="hidden font-bold text-white md:inline">&gt; ENCRYPTED</span>
-						<span className="hidden text-white/40 md:inline">|</span>
-						<span className="hidden font-bold text-white md:inline">&gt; ANONYMOUS</span>
-					</div>
-					<div className="flex items-center gap-2">
-						<div className="h-2 w-2 animate-pulse rounded-full bg-white" />
-						<span className="font-bold text-white">LIVE</span>
-					</div>
-				</div>
-			</div>
-
-			<div className="relative z-10 flex h-screen flex-col items-center justify-center overflow-hidden p-8">
-				<div className="mb-4 mt-8 px-4 text-center">
-					<div className="word text-sm font-bold uppercase tracking-[0.2em] text-white/60 sm:text-sm md:text-base" data-delay="0">
-						Keep What&#39;s Yours
-					</div>
-				</div>
-
-				<div className="mx-auto mb-6 max-w-7xl px-4 text-center">
-					<div className="mb-6">
-						<h1 className="brutal-glitch word mb-2 block text-7xl font-black leading-none tracking-tighter text-white sm:text-7xl md:text-8xl lg:text-9xl xl:text-[12rem]" data-delay="300">
-							NOMA
-						</h1>
-						<div className="word inline-block font-mono text-2xl font-bold tracking-[0.3em] text-white/90 sm:text-2xl md:text-3xl lg:text-4xl" data-delay="500">
-							CASH
+			<div className="relative z-10 flex flex-col items-center justify-center h-screen p-8 overflow-hidden">
+				<div className="fixed top-0 left-0 right-0 z-50">
+					<div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+						<div className="flex items-center gap-2 sm:gap-4 md:gap-8 text-[0.6rem] sm:text-xs font-mono uppercase tracking-wider">
+							<span className="text-white font-bold hidden sm:inline">{'>'} SURVEILLANCE_OFF</span>
+							<span className="text-white font-bold sm:hidden">{'>'} SURV_OFF</span>
+							<span className="text-white/40 hidden sm:inline">{'|'}</span>
+							<span className="text-white font-bold hidden md:inline">{'>'} ENCRYPTED</span>
+							<span className="text-white/40 hidden md:inline">{'|'}</span>
+							<span className="text-white font-bold hidden md:inline">{'>'} ANONYMOUS</span>
 						</div>
-					</div>
-
-					<div className="mb-4 text-2xl font-black leading-none tracking-tight text-white sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl">
-						<div className="mb-1">
-							<span className="word brutal-word" data-delay="700">
-								PRIVACY.
-							</span>
-						</div>
-						<div className="mb-1">
-							<span className="word brutal-word text-red-600" data-delay="900">
-								FUCK
-							</span>{' '}
-							<span className="word brutal-word text-red-600" data-delay="1050">
-								THE
-							</span>{' '}
-							<span className="word brutal-word text-red-600" data-delay="1200">
-								REST
-							</span>
-						</div>
-					</div>
-
-					<div className="mb-4 space-y-1 text-sm font-black uppercase tracking-wider text-white/90 sm:text-base md:text-lg lg:text-xl">
-						<div>
-							<span className="word brutal-statement" data-delay="1500">
-								FUCK
-							</span>{' '}
-							<span className="word brutal-statement" data-delay="1650">
-								CENSORSHIP
-							</span>
-						</div>
-						<div>
-							<span className="word brutal-statement" data-delay="1800">
-								FUCK
-							</span>{' '}
-							<span className="word brutal-statement" data-delay="1950">
-								REGIMES
-							</span>
+						<div className="flex items-center gap-2 sm:gap-3">
+							<div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
+							<span className="text-[0.6rem] sm:text-xs font-mono text-white uppercase tracking-widest font-bold">LIVE</span>
 						</div>
 					</div>
 				</div>
 
-				<div className="fade-in-stats mb-6 flex items-center justify-center gap-4 px-4 sm:gap-6 md:gap-8 lg:gap-16">
-					<div className="grunge-stat text-center">
-						<div className="grunge-flicker mb-1 font-mono text-[0.6rem] uppercase tracking-[0.2em] text-white/60 sm:text-xs md:text-sm">APY</div>
-						<div className="grunge-text text-2xl font-black text-white sm:text-3xl md:text-4xl lg:text-5xl" data-text="UP TO 20%">
-							UP TO 20%
-						</div>
-					</div>
-					<div className="grunge-stat text-center">
-						<div className="grunge-flicker mb-1 font-mono text-[0.6rem] uppercase tracking-[0.2em] text-white/60 sm:text-xs md:text-sm">SECURE</div>
-						<div className="grunge-text text-2xl font-black text-white sm:text-3xl md:text-4xl lg:text-5xl" data-text="TRANSFERS">
-							TRANSFERS
-						</div>
-					</div>
-					<div className="grunge-stat text-center">
-						<div className="grunge-flicker mb-1 font-mono text-[0.6rem] uppercase tracking-[0.2em] text-white/60 sm:text-xs md:text-sm">PRIVACY</div>
-						<div className="grunge-text text-2xl font-black text-white sm:text-3xl md:text-4xl lg:text-5xl" data-text="FULL">
-							FULL
-						</div>
+				<div className="text-center mb-2 sm:mb-4 mt-4 sm:mt-8 px-4">
+					<div className="text-sm sm:text-sm md:text-base uppercase tracking-[0.2em] sm:tracking-[0.3em] font-bold text-white/60">
+						<span className="word" data-delay="0">Keep</span>{' '}
+						<span className="word" data-delay="100">What&apos;s</span>{' '}
+						<span className="word" data-delay="200">Yours</span>
 					</div>
 				</div>
 
-				<div className="fade-in-cta mb-6 flex flex-col gap-3 px-4 sm:flex-row sm:gap-4">
-					{!connected ? (
-						<button
-							onClick={handleEnterApp}
-							className="brutal-btn-primary px-8 py-3 text-sm font-black uppercase tracking-[0.2em] sm:px-8 sm:py-3 sm:text-sm md:text-base"
+				<div className="text-center max-w-7xl mx-auto mb-3 sm:mb-6 px-4">
+					<div className="mb-3 sm:mb-6">
+						<h1 
+							className="text-white uppercase tracking-tighter brutal-glitch"
+							style={{ fontFamily: 'Anton, sans-serif', fontSize: 'clamp(4rem, 15vw, 8rem)', lineHeight: '0.9' }}
 						>
-							&gt; ENTER APP
-						</button>
-					) : (
-						<WalletMultiButton className="brutal-btn-primary !bg-transparent !border-none !text-inherit !font-inherit !p-0 !m-0 !h-auto !min-h-0 !rounded-none hover:!bg-transparent focus:!bg-transparent px-8 py-3 text-sm font-black uppercase tracking-[0.2em] sm:px-8 sm:py-3 sm:text-sm md:text-base" />
-					)}
+							<span className="word block" data-delay="300">NOMA</span>
+						</h1>
+						<div 
+							className="text-white/90 uppercase tracking-[0.3em] md:tracking-[0.4em] font-mono font-bold"
+							style={{ fontSize: 'clamp(0.75rem, 3vw, 1.5rem)' }}
+						>
+							<span className="word inline-block" data-delay="500">CASH</span>
+						</div>
+					</div>
+					
+				</div>
+
+				<div className="flex justify-center items-center gap-4 sm:gap-6 md:gap-8 lg:gap-16 mb-4 sm:mb-6 opacity-0 fade-in-stats px-4">
+					<div className="grunge-stat">
+						<div className="text-[0.6rem] sm:text-xs md:text-sm text-white/60 mb-1 font-mono uppercase tracking-[0.2em] sm:tracking-[0.3em] grunge-flicker">APY</div>
+						<div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white grunge-text">UP TO 20%</div>
+					</div>
+					<div className="grunge-stat">
+						<div className="text-[0.6rem] sm:text-xs md:text-sm text-white/60 mb-1 font-mono uppercase tracking-[0.2em] sm:tracking-[0.3em] grunge-flicker">SECURE</div>
+						<div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white grunge-text">TRANSFERS</div>
+					</div>
+					<div className="grunge-stat">
+						<div className="text-[0.6rem] sm:text-xs md:text-sm text-white/60 mb-1 font-mono uppercase tracking-[0.2em] sm:tracking-[0.3em] grunge-flicker">PRIVACY</div>
+						<div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white grunge-text">FULL</div>
+					</div>
+				</div>
+
+				<div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6 opacity-0 fade-in-cta px-4">
+					<button
+						onClick={handleEnterApp}
+						className="brutal-btn-primary px-8 sm:px-8 py-3.5 sm:py-3 text-sm sm:text-sm md:text-base font-black uppercase tracking-[0.2em] sm:tracking-[0.3em]"
+					>
+						{'>'} ENTER APP
+					</button>
 					<button
 						onClick={() => setManifestoOpen(true)}
-						className="brutal-btn-ghost px-8 py-3 text-sm font-black uppercase tracking-[0.2em] sm:px-8 sm:py-3 sm:text-sm md:text-base"
+						className="brutal-btn-ghost px-8 sm:px-8 py-3.5 sm:py-3 text-sm sm:text-sm md:text-base font-black uppercase tracking-[0.2em] sm:tracking-[0.3em]"
 					>
-						&gt; MANIFESTO
+						{'>'} MANIFESTO
 					</button>
 				</div>
 
-				<div className="px-4 text-center">
-					<div className="brutal-bottom word text-xs font-black uppercase tracking-[0.3em] text-white/70 sm:text-sm md:text-base" data-delay="2200">
-						THEY CAN&#39;T STOP US
+				<div className="text-center px-4">
+					<div className="text-xs sm:text-sm md:text-base uppercase tracking-[0.3em] sm:tracking-[0.4em] font-black text-white/70 brutal-bottom">
+						<span className="word" data-delay="2200">THEY</span>{' '}
+						<span className="word" data-delay="2300">CAN&apos;T</span>{' '}
+						<span className="word" data-delay="2400">STOP</span>{' '}
+						<span className="word" data-delay="2500">US</span>
 					</div>
 				</div>
 
 				{glitchTexts.map((item) => (
 					<div
 						key={item.id}
-						className="glitch-text-random fixed"
-						style={{ left: `${item.x}%`, top: `${item.y}%`, fontSize: `${item.size}rem` }}
+						className="fixed text-red-600 font-black uppercase tracking-wider glitch-text-random opacity-0"
+						style={{
+							left: `${item.x}%`,
+							top: `${item.y}%`,
+							fontSize: `${Math.random() * 0.5 + 0.5}rem`,
+						}}
 					>
 						{item.text}
 					</div>
 				))}
 
-				<div className="hidden space-y-2 font-mono text-xs uppercase tracking-widest text-white/70 md:fixed md:bottom-12 md:left-12 md:block">
-					<div className="flex items-center gap-2 font-black">
-						<Heart className="h-4 w-4" /> SOL POWERED
+				<div className="fixed bottom-6 sm:bottom-12 left-4 sm:left-12 text-xs sm:text-sm text-white/70 font-mono uppercase tracking-widest space-y-1 sm:space-y-2 hidden md:block">
+					<div className="font-black flex items-center gap-2">
+						<Heart className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" />
+						SOL POWERED
 					</div>
-					<div className="flex items-center gap-2 font-black">
-						<Zap className="h-4 w-4" /> FAST AS HELL
+					<div className="font-black flex items-center gap-2">
+						<Zap className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" />
+						FAST AS HELL
 					</div>
-					<div className="flex items-center gap-2 font-black">
-						<Flame className="h-4 w-4" /> UNSTOPPABLE
+					<div className="font-black flex items-center gap-2">
+						<Flame className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" />
+						UNSTOPPABLE
 					</div>
 				</div>
 
-				<div className="hidden font-mono text-xs text-white/50 md:fixed md:right-12 md:top-24">
+				<div className="fixed top-24 right-12 text-xs text-white/50 font-mono hidden md:block">
 					<div>REC ●</div>
-					<div>{currentTime}</div>
+					<div>{new Date().toLocaleTimeString()}</div>
 				</div>
+
+				<div className="corner-bracket corner-tl" />
+				<div className="corner-bracket corner-tr" />
+				<div className="corner-bracket corner-bl" />
+				<div className="corner-bracket corner-br" />
 			</div>
 
 			<Dialog open={manifestoOpen} onOpenChange={setManifestoOpen}>
-				<DialogContent className="w-[95vw] max-w-6xl border-4 border-white/30 bg-black p-4 sm:p-6">
+				<DialogContent className="max-w-6xl w-[95vw] bg-black border-4 border-white/30 p-4 sm:p-6">
 					<DialogTitle className="sr-only">NOMA Manifesto</DialogTitle>
-					<DialogDescription className="sr-only">Watch the NOMA manifesto</DialogDescription>
+					<DialogDescription className="sr-only">
+						Watch the NOMA manifesto video
+					</DialogDescription>
+
+					<DialogClose className="absolute top-2 right-2 z-50 text-white/70 hover:text-white transition-colors bg-black/80 border border-white/30 p-2">
+						<X className="w-5 h-5" />
+					</DialogClose>
 
 					<div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-						<video
-							className="absolute left-0 top-0 h-full w-full border-2 border-white/20"
-							src="/1029_480.mov"
+						<iframe
+							className="absolute top-0 left-0 w-full h-full border-2 border-white/20"
+							src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0"
 							title="NOMA MANIFESTO"
-							controls
-							autoPlay
-							muted
-							playsInline
-						/>
+							allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+							allowFullScreen
+						></iframe>
 					</div>
 				</DialogContent>
 			</Dialog>
 
 			{showPwaBanner && (
-				<div className="fixed top-0 left-0 right-0 z-[100] animate-slide-down">
-					<div className="border-b-4 border-white/30 bg-black shadow-2xl">
-						<div className="mx-auto max-w-4xl px-3 py-3 sm:px-4 sm:py-4">
+				<div
+					className="fixed top-0 left-0 right-0 z-[100]"
+					style={{
+						animation: 'slideDown 0.5s ease-out forwards',
+					}}
+				>
+					<div className="bg-black border-b-4 border-white/30 shadow-2xl">
+						<div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
 							{isIOSDevice ? (
 								<div className="space-y-3">
 									<div className="flex items-center justify-between gap-4">
-										<div className="flex flex-1 items-center gap-3">
-											<div className="border-2 border-white/30 bg-red-600 p-2">
-												<Smartphone className="h-5 w-5 text-white" />
+										<div className="flex items-center gap-3 flex-1">
+											<div className="bg-red-600 p-2 border-2 border-white/30 flex-shrink-0">
+												<Smartphone className="w-5 h-5 text-white" />
 											</div>
-											<div className="min-w-0 flex-1">
+
+											<div className="flex-1 min-w-0">
 												<h3
-													className="mb-0.5 uppercase tracking-wider text-white"
+													className="text-white uppercase tracking-wider mb-0.5 text-sm sm:text-base"
 													style={{ fontFamily: 'Anton, sans-serif' }}
 												>
-													&gt; ADD TO HOME
+													{'>'} ADD TO HOME
 												</h3>
-												<p className="font-mono text-[10px] uppercase tracking-wider text-white/60">
+												<p className="text-[9px] sm:text-[10px] font-mono text-white/60 uppercase tracking-wider">
 													INSTANT ACCESS • ZERO TRACE
 												</p>
 											</div>
 										</div>
+
 										<button
 											onClick={handlePwaDismiss}
-											className="border-2 border-white/30 bg-black/80 p-2 text-white/70 transition-colors hover:text-white"
+											className="text-white/70 hover:text-white transition-colors bg-black/80 border-2 border-white/30 p-2 flex-shrink-0"
 										>
-											<X className="h-4 w-4" />
+											<X className="w-4 h-4" />
 										</button>
 									</div>
 
-									<div className="space-y-2 border-2 border-white/20 bg-white/5 p-3">
-										<div className="flex items-start gap-2">
-											<Share2 className="mt-0.5 h-4 w-4 text-red-500" />
-											<p className="font-mono text-[10px] text-white/80">
-												Tap <span className="font-bold text-red-500">SHARE</span> button in Safari
+									<div className="bg-white/5 border-2 border-white/20 p-3">
+										<div className="flex items-start gap-2 mb-2">
+											<Share2 className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+											<p className="text-[10px] sm:text-xs font-mono text-white/80">
+												Tap <span className="text-red-500 font-bold">SHARE</span> button in Safari
 											</p>
 										</div>
 										<div className="flex items-start gap-2">
-											<Smartphone className="mt-0.5 h-4 w-4 text-red-500" />
-											<p className="font-mono text-[10px] text-white/80">
-												Select <span className="font-bold text-red-500">&quot;Add to Home Screen&quot;</span>
+											<Smartphone className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+											<p className="text-[10px] sm:text-xs font-mono text-white/80">
+												Select <span className="text-red-500 font-bold">"Add to Home Screen"</span>
 											</p>
 										</div>
 									</div>
 								</div>
 							) : (
 								<div className="flex items-center justify-between gap-4">
-									<div className="flex flex-1 items-center gap-3 sm:gap-4">
-										<div className="border-2 border-white/30 bg-red-600 p-2">
-											<Smartphone className="h-5 w-5 text-white" />
+									<div className="flex items-center gap-3 sm:gap-4 flex-1">
+										<div className="bg-red-600 p-2 border-2 border-white/30 flex-shrink-0">
+											<Smartphone className="w-5 h-5 text-white" />
 										</div>
-										<div className="min-w-0 flex-1">
+
+										<div className="flex-1 min-w-0">
 											<h3
-												className="mb-0.5 uppercase tracking-wider text-white"
+												className="text-white uppercase tracking-wider mb-0.5 text-sm sm:text-base"
 												style={{ fontFamily: 'Anton, sans-serif' }}
 											>
-												&gt; ADD TO HOME SCREEN
+												{'>'} ADD TO HOME SCREEN
 											</h3>
-											<p className="font-mono text-[10px] uppercase tracking-wider text-white/60">
+											<p className="text-[9px] sm:text-[10px] font-mono text-white/60 uppercase tracking-wider">
 												INSTANT ACCESS • ZERO TRACE
 											</p>
 										</div>
@@ -588,24 +574,25 @@ export default function Home() {
 									<div className="flex items-center gap-2">
 										<button
 											onClick={handlePwaInstall}
-											className="border-2 border-white/30 bg-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white transition-colors hover:bg-red-700 sm:px-4 sm:text-xs"
+											className="bg-red-600 hover:bg-red-700 border-2 border-white/30 text-white font-black uppercase tracking-wider px-3 sm:px-4 py-2 text-[10px] sm:text-xs transition-colors whitespace-nowrap"
 										>
-											&gt; INSTALL
+											{'>'} INSTALL
 										</button>
 										<button
 											onClick={handlePwaDismiss}
-											className="border-2 border-white/30 bg-black/80 p-2 text-white/70 transition-colors hover:text-white"
+											className="text-white/70 hover:text-white transition-colors bg-black/80 border-2 border-white/30 p-2"
 										>
-											<X className="h-4 w-4" />
+											<X className="w-4 h-4" />
 										</button>
 									</div>
 								</div>
 							)}
 						</div>
-						<div className="h-1 bg-gradient-to-r from-transparent via-red-600/50 to-transparent opacity-50" />
+
+						<div className="h-1 bg-gradient-to-r from-transparent via-red-600/50 to-transparent opacity-50"></div>
 					</div>
 				</div>
 			)}
 		</div>
-		);
+	);
 	}
