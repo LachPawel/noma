@@ -529,7 +529,7 @@ export default function Home() {
 					<div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
 						<iframe
 							className="absolute top-0 left-0 w-full h-full border-2 border-white/20"
-							src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0"
+							src="https://www.youtube.com/embed/rcTwOFKJcjo?autoplay=0"
 							title="NOMA MANIFESTO"
 							allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
 							allowFullScreen

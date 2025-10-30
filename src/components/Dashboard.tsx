@@ -11,7 +11,6 @@ import {
   QrCode,
   RefreshCcw,
   Send,
-  TrendingUp,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -112,16 +111,6 @@ export default function Dashboard({
     if (success) {
       setSendAmount("");
       setRecipient("");
-    }
-  };
-
-  const handleConvert = async () => {
-    if (!convertAmount) {
-      return;
-    }
-    const success = await onConvert(convertAmount);
-    if (success) {
-      setConvertAmount("");
     }
   };
 

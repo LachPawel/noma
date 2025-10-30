@@ -20,6 +20,7 @@ class AnonNeobankSDK {
   private usdcPlus: UsdcPlusStablecoin;
   private lstStable: LstStablecoin;
   private tokenizedBond: ReflectTokenisedBond;
+  private cluster: 'mainnet-beta' | 'devnet';
 
   constructor(
     gridApiKey: string,
@@ -33,9 +34,68 @@ class AnonNeobankSDK {
     });
 
     this.connection = new Connection(solanaRpcUrl);
+    
+    // Determine cluster based on RPC URL
+    this.cluster = solanaRpcUrl.includes('devnet') ? 'devnet' : 'mainnet-beta';
+    console.log(`Initializing Reflect Money SDK for ${this.cluster}`);
+    
+    // Initialize Reflect Money SDK
     this.usdcPlus = new UsdcPlusStablecoin(this.connection);
     this.lstStable = new LstStablecoin(this.connection);
     this.tokenizedBond = new ReflectTokenisedBond(this.connection);
+    
+    // If we're on devnet, we might need to override some internal configuration
+    if (this.cluster === 'devnet') {
+      this.configureForDevnet();
+    }
+  }
+
+  private configureForDevnet(): void {
+    // Override any internal API endpoints or configuration for devnet
+    // This is where we can patch the SDK to use dev.api.reflect.money
+    console.log('Configuring Reflect Money SDK for devnet...');
+    
+    // Check if the SDK has any configurable endpoints
+    // We might need to override the internal fetch function or API base URL
+    
+    // If the SDK uses a global fetch or has configurable endpoints, override them
+    const originalFetch = global.fetch;
+    if (originalFetch) {
+      global.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+        const url = typeof input === 'string' ? input : input.toString();
+        
+        // Redirect Reflect Money API calls to devnet
+        if (url.includes('api.reflect.money')) {
+          const devnetUrl = url.replace('api.reflect.money', 'dev.api.reflect.money');
+          console.log(`Redirecting API call to devnet: ${devnetUrl}`);
+          return originalFetch(devnetUrl, init);
+        }
+        
+        // Add cluster parameter to Reflect Money API calls if needed
+        if (url.includes('reflect.money') && !url.includes('cluster=')) {
+          const separator = url.includes('?') ? '&' : '?';
+          const devnetUrl = `${url}${separator}cluster=devnet`;
+          console.log(`Adding cluster parameter: ${devnetUrl}`);
+          return originalFetch(devnetUrl, init);
+        }
+        
+        return originalFetch(input, init);
+      };
+    }
+    
+    // Alternative: Check if the SDK exposes any configuration options
+    // Some SDKs allow overriding the base URL or cluster
+    try {
+      // Try to set any available configuration
+      if (this.usdcPlus && typeof (this.usdcPlus as any).setCluster === 'function') {
+        (this.usdcPlus as any).setCluster('devnet');
+      }
+      if (this.usdcPlus && typeof (this.usdcPlus as any).setBaseUrl === 'function') {
+        (this.usdcPlus as any).setBaseUrl('https://dev.api.reflect.money');
+      }
+    } catch (error) {
+      console.warn('Could not configure SDK cluster directly:', error);
+    }
   }
 
   // ============================================================================
@@ -114,35 +174,32 @@ class AnonNeobankSDK {
   // ============================================================================
 
   async loadStablecoinData(): Promise<void> {
-    // Reflect Money stablecoins are only available on mainnet-beta
-    // Check if we're on the right network
-    const rpcUrl = this.connection.rpcEndpoint;
-    const isMainnet = rpcUrl.includes('mainnet');
+    // Reflect Money stablecoins are now available on both mainnet-beta and devnet
+    console.log(`Loading USDC+ stablecoin data for ${this.cluster}...`);
     
-    if (!isMainnet) {
-      console.warn('⚠️  Reflect Money stablecoins (USDC+, LST) are only available on mainnet-beta');
-      console.warn('Current RPC:', rpcUrl);
-      throw new Error(
-        'USDC+ stablecoin conversion is only available on Solana mainnet-beta. ' +
-        'Please switch to mainnet or use regular transfers on devnet.'
-      );
-    }
-    
-    // Only load USDC+ for now, as LST stablecoin may not be available on all networks
+    // Load USDC+ stablecoin data
     try {
       await this.usdcPlus.load();
-      console.log('USDC+ stablecoin data loaded successfully');
+      console.log(`USDC+ stablecoin data loaded successfully on ${this.cluster}`);
     } catch (error) {
       console.error('Failed to load USDC+ data:', error);
-      throw new Error('Failed to load USDC+ stablecoin data on mainnet');
+      
+      // If we're on devnet and there's an error, provide helpful information
+      if (this.cluster === 'devnet') {
+        console.error('Make sure USDC+ is properly deployed on devnet');
+        console.error('Devnet deployment transaction:', '5zMUtCWG4bSc1jv4B5tMbacDtZFVN2mSPf5DeeoVp8vCeFSf1ipsH5xZLT9trDFsFTyqHXhePWnbCSRqrNvYgqBM');
+        console.error('Try using devnet API: https://dev.api.reflect.money');
+      }
+      
+      throw new Error(`Failed to load USDC+ stablecoin data on ${this.cluster}: ${error}`);
     }
     
     // Optionally try to load LST stable, but don't fail if it's not available
     try {
       await this.lstStable.load();
-      console.log('LST stablecoin data loaded successfully');
+      console.log(`LST stablecoin data loaded successfully on ${this.cluster}`);
     } catch (error) {
-      console.warn('LST stablecoin not available:', error);
+      console.warn(`LST stablecoin not available on ${this.cluster}:`, error);
       // Don't throw - LST is optional
     }
   }
