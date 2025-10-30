@@ -21,8 +21,9 @@ interface DashboardProps {
   totalBalance: number;
   usdcBalance: number;
   yieldEarned: number;
-  onSend: (amount: string, recipient: string) => Promise<boolean>;
+  onSend: (amount: string, recipient: string, currency: string) => Promise<boolean>;
   onConvert: (amount: string) => Promise<boolean>;
+  onRedeemYield: (amount: string) => Promise<boolean>;
   onSwap: (amount: string, fromCurrency: string, toCurrency: string) => Promise<boolean>;
   onRefreshBalances: () => Promise<void>;
   loading: boolean;
@@ -39,6 +40,7 @@ export default function Dashboard({
   yieldEarned,
   onSend,
   onConvert,
+  onRedeemYield,
   onSwap,
   onRefreshBalances,
   loading,
@@ -56,6 +58,14 @@ export default function Dashboard({
   const [swapAmount, setSwapAmount] = useState("");
   const [fromCurrency, setFromCurrency] = useState("USDC");
   const [toCurrency, setToCurrency] = useState("SOL");
+
+  // Yield states
+  const [yieldAmount, setYieldAmount] = useState("");
+  const [yieldDirection, setYieldDirection] = useState<"toYield" | "fromYield">("toYield");
+
+  // Send and Receive currency states
+  const [sendCurrency, setSendCurrency] = useState("USDC");
+  const [receiveCurrency, setReceiveCurrency] = useState("USDC");
 
   useEffect(() => {
     const words = document.querySelectorAll(".word");
@@ -107,7 +117,7 @@ export default function Dashboard({
     if (!sendAmount || !recipient) {
       return;
     }
-    const success = await onSend(sendAmount, recipient);
+    const success = await onSend(sendAmount, recipient, sendCurrency);
     if (success) {
       setSendAmount("");
       setRecipient("");
@@ -121,6 +131,20 @@ export default function Dashboard({
     const success = await onSwap(swapAmount, fromCurrency, toCurrency);
     if (success) {
       setSwapAmount("");
+    }
+  };
+
+  const handleYieldConvert = async () => {
+    if (!yieldAmount) {
+      return;
+    }
+    
+    const success = yieldDirection === "toYield" 
+      ? await onConvert(yieldAmount)
+      : await onRedeemYield(yieldAmount);
+      
+    if (success) {
+      setYieldAmount("");
     }
   };
 
@@ -222,7 +246,7 @@ export default function Dashboard({
         </div>
 
         <Tabs defaultValue="send" className="w-full">
-          <TabsList className="grid h-auto w-full grid-cols-3 gap-1 border-2 border-white/20 bg-black/40 p-1">
+          <TabsList className="grid h-auto w-full grid-cols-4 gap-1 border-2 border-white/20 bg-black/40 p-1">
             <TabsTrigger
               value="send"
               className="rounded-none py-3 text-[0.6rem] font-black uppercase tracking-wider text-white/60 transition data-[state=active]:border-2 data-[state=active]:border-white data-[state=active]:bg-white data-[state=active]:text-black sm:py-4 sm:text-xs md:text-sm"
@@ -240,6 +264,14 @@ export default function Dashboard({
               <span className="sm:hidden">Receive</span>
             </TabsTrigger>
             <TabsTrigger
+              value="yield"
+              className="rounded-none py-3 text-[0.6rem] font-black uppercase tracking-wider text-white/60 transition data-[state=active]:border-2 data-[state=active]:border-white data-[state=active]:bg-white data-[state=active]:text-black sm:py-4 sm:text-xs md:text-sm"
+            >
+              <RefreshCcw className="mr-1 h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Earn Yield</span>
+              <span className="sm:hidden">Yield</span>
+            </TabsTrigger>
+            <TabsTrigger
               value="swap"
               className="rounded-none py-3 text-[0.6rem] font-black uppercase tracking-wider text-white/60 transition data-[state=active]:border-2 data-[state=active]:border-white data-[state=active]:bg-white data-[state=active]:text-black sm:py-4 sm:text-xs md:text-sm"
             >
@@ -252,13 +284,29 @@ export default function Dashboard({
           <TabsContent value="send" className="mt-0">
             <div className="grunge-box space-y-6 border-2 border-white/20 p-6 sm:p-8">
               <div className="font-mono text-xs uppercase tracking-wider text-white/50 sm:text-sm">
-                Send via Grid (uses your session)
+                Send {sendCurrency}
               </div>
 
               <div className="space-y-4">
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-wider text-white sm:text-sm">
-                    Amount (USDC)
+                    Currency
+                  </label>
+                  <Select value={sendCurrency} onValueChange={setSendCurrency}>
+                    <SelectTrigger className="h-auto w-full rounded-none border-2 border-white/20 bg-black/60 px-4 py-3 font-mono text-sm text-white transition-colors focus:border-white/60 focus:outline-none sm:py-4 sm:text-base">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-none border-2 border-white/20 bg-black font-mono text-white">
+                      <SelectItem value="USDC" className="text-white hover:bg-white/10 focus:bg-white/10">USDC</SelectItem>
+                      <SelectItem value="USDT" className="text-white hover:bg-white/10 focus:bg-white/10">USDT</SelectItem>
+                      <SelectItem value="SOL" className="text-white hover:bg-white/10 focus:bg-white/10">SOL</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs font-black uppercase tracking-wider text-white sm:text-sm">
+                    Amount ({sendCurrency})
                   </label>
                   <input
                     type="number"
@@ -300,7 +348,23 @@ export default function Dashboard({
           <TabsContent value="receive" className="mt-0">
             <div className="grunge-box space-y-6 border-2 border-white/20 p-6 sm:p-8">
               <div className="font-mono text-xs uppercase tracking-wider text-white/50 sm:text-sm">
-                Receive USDC to your wallet
+                Receive {receiveCurrency} to your wallet
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-black uppercase tracking-wider text-white sm:text-sm">
+                  Currency to Receive
+                </label>
+                <Select value={receiveCurrency} onValueChange={setReceiveCurrency}>
+                  <SelectTrigger className="h-auto w-full rounded-none border-2 border-white/20 bg-black/60 px-4 py-3 font-mono text-sm text-white transition-colors focus:border-white/60 focus:outline-none sm:py-4 sm:text-base">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-none border-2 border-white/20 bg-black font-mono text-white">
+                    <SelectItem value="USDC" className="text-white hover:bg-white/10 focus:bg-white/10">USDC</SelectItem>
+                    <SelectItem value="USDT" className="text-white hover:bg-white/10 focus:bg-white/10">USDT</SelectItem>
+                    <SelectItem value="SOL" className="text-white hover:bg-white/10 focus:bg-white/10">SOL</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex justify-center">
@@ -391,10 +455,145 @@ export default function Dashboard({
                 </div>
                 <ul className="mt-2 space-y-1 font-mono text-xs text-white/50">
                   <li>• Share your address or QR code</li>
-                  <li>• Only accept USDC on Solana</li>
+                  <li>• Only accept {receiveCurrency} on Solana</li>
                   <li>• Transactions are irreversible</li>
                   <li>• Verify sender before confirming</li>
                 </ul>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="yield" className="mt-0">
+            <div className="grunge-box space-y-6 border-2 border-white/20 p-6 sm:p-8">
+              <div className="font-mono text-xs uppercase tracking-wider text-white/50 sm:text-sm">
+                {yieldDirection === "toYield" ? "Convert USDC to USDC+ (Earn Yield)" : "Redeem USDC+ to USDC"}
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-4 block text-xs font-black uppercase tracking-wider text-white sm:text-sm">
+                    Conversion Direction
+                  </label>
+                  <div className="flex items-center justify-center">
+                    <div className="flex items-center gap-6">
+                      <span className={`font-mono text-sm transition-colors ${yieldDirection === "toYield" ? "text-white font-black" : "text-white/40"}`}>
+                        USDC → USDC+
+                      </span>
+                      <button
+                        onClick={() => setYieldDirection(yieldDirection === "toYield" ? "fromYield" : "toYield")}
+                        className="relative inline-flex h-8 w-16 items-center rounded-none border-2 border-white/30 bg-black/80 transition-all duration-300 focus:outline-none focus:border-white/60 hover:border-white/50"
+                      >
+                        <span
+                          className={`inline-block h-6 w-6 transform rounded-none border-2 transition-all duration-300 ${
+                            yieldDirection === "toYield" 
+                              ? "translate-x-1 border-white bg-white" 
+                              : "translate-x-7 border-white/60 bg-white/60"
+                          }`}
+                        />
+                      </button>
+                      <span className={`font-mono text-sm transition-colors ${yieldDirection === "fromYield" ? "text-white font-black" : "text-white/40"}`}>
+                        USDC+ → USDC
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-center text-xs font-mono text-white/50">
+                    {yieldDirection === "toYield" ? "Earn yield on your USDC" : "Redeem USDC+ back to USDC"}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs font-black uppercase tracking-wider text-white sm:text-sm">
+                    Amount ({yieldDirection === "toYield" ? "USDC" : "USDC+"})
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={yieldAmount}
+                    onChange={(e) => setYieldAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full rounded-none border-2 border-white/20 bg-black/60 px-4 py-3 font-mono text-base text-white transition-colors outline-none focus:border-white/60 sm:py-4 sm:text-lg"
+                    disabled={loading}
+                  />
+                </div>
+
+                {/* Conversion Information */}
+                <div className="rounded-none border border-white/20 bg-white/5 p-4">
+                  <div className="mb-3 text-xs font-black uppercase tracking-wider text-white/70">
+                    {yieldDirection === "toYield" ? "Yield Information" : "Redemption Information"}
+                  </div>
+                  <div className="space-y-2">
+                    {yieldDirection === "toYield" ? (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs text-white/60">Current APY:</span>
+                          <span className="text-sm font-black text-green-400">20%</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs text-white/60">You will receive:</span>
+                          <span className="text-sm font-black text-white">
+                            {yieldAmount ? parseFloat(yieldAmount).toFixed(2) : '0.00'} USDC+
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs text-white/60">Est. annual earnings:</span>
+                          <span className="text-sm font-black text-white/80">
+                            ${yieldAmount ? (parseFloat(yieldAmount) * 0.2).toFixed(2) : '0.00'}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs text-white/60">Exchange rate:</span>
+                          <span className="text-sm font-black text-white">1 USDC+ = 1 USDC</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs text-white/60">You will receive:</span>
+                          <span className="text-sm font-black text-white">
+                            {yieldAmount ? parseFloat(yieldAmount).toFixed(2) : '0.00'} USDC
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs text-white/60">Processing time:</span>
+                          <span className="text-sm font-black text-white/80">Instant</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Benefits/Information */}
+                <div className="border border-white/20 bg-white/5 p-4">
+                  <div className="text-xs font-black uppercase tracking-wider text-white/70">
+                    {yieldDirection === "toYield" ? "Benefits of USDC+" : "Redemption Details"}
+                  </div>
+                  <ul className="mt-2 space-y-1 font-mono text-xs text-white/50">
+                    {yieldDirection === "toYield" ? (
+                      <>
+                        <li>• Earn up to 20% APY on your USDC</li>
+                        <li>• Compound interest automatically</li>
+                        <li>• Redeem back to USDC anytime</li>
+                        <li>• Protected by DeFi protocols</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>• Instant conversion to USDC</li>
+                        <li>• No fees or penalties</li>
+                        <li>• Keep all earned yield</li>
+                        <li>• Can re-convert to USDC+ anytime</li>
+                      </>
+                    )}
+                  </ul>
+                </div>
+
+                <button
+                  onClick={handleYieldConvert}
+                  disabled={loading || !yieldAmount}
+                  className="brutal-btn-primary flex w-full items-center justify-center gap-3 py-4 text-sm font-black uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-60 sm:py-5 sm:text-base"
+                >
+                  {loading ? "Processing..." : yieldDirection === "toYield" ? "Convert to USDC+" : "Redeem to USDC"}
+                  <RefreshCcw className="h-4 w-4 sm:h-5 sm:w-5" />
+                </button>
               </div>
             </div>
           </TabsContent>
@@ -465,7 +664,6 @@ export default function Dashboard({
                       <SelectItem value="SOL" className="text-white hover:bg-white/10 focus:bg-white/10">SOL</SelectItem>
                       <SelectItem value="USDC" className="text-white hover:bg-white/10 focus:bg-white/10">USDC</SelectItem>
                       <SelectItem value="USDT" className="text-white hover:bg-white/10 focus:bg-white/10">USDT</SelectItem>
-                      <SelectItem value="USDC+" className="text-white hover:bg-white/10 focus:bg-white/10">USDC+ (Yield)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -478,20 +676,6 @@ export default function Dashboard({
                       {swapAmount ? (parseFloat(swapAmount) * 0.98).toFixed(4) : '0.00'} {toCurrency}
                     </span>
                   </div>
-                  {fromCurrency === 'USDC' && toCurrency === 'USDC+' && (
-                    <div className="mt-2 border-t border-white/10 pt-2">
-                      <div className="mb-1 flex items-center justify-between">
-                        <span className="font-mono text-xs text-white/60">APY:</span>
-                        <span className="text-sm font-black text-white/80">20%</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs text-white/60">Annual earnings:</span>
-                        <span className="text-sm font-black text-white/80">
-                          ${swapAmount ? (parseFloat(swapAmount) * 0.2).toFixed(2) : '0.00'}
-                        </span>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <button 
